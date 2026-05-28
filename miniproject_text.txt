@@ -1,0 +1,183 @@
+Total pages: 6
+
+--- Page 1 ---
+Project 1: Hệ thống phát hiện & phân loại phương tiện giao thông trên video 
+1. Mục tiêu: Xây dựng hệ thống:  
+- Phát hiện phương tiện trong video;  
+- Phân loại: Ô tô/ Xe máy/ Xe tải 
+- Theo dõi (tracking) qua các frame (option) 
+2. Dataset: COCO Dataset (class: car, motorcycle, truck)/ UA-DETRAC Dataset/ 
+Dataset tự thu thập: video giao thông tại Da Nang 
+3. Kiến trúc hệ thống:  
+Pipeline: Video ➔ Frame extraction ➔ Object Detection ➔ Classification ➔ Tracking 
+➔ Output video 
+4. Yêu cầu kỹ thuật  
+Base: 
+- Load model pretrained 
+- Detect object trên video 
+Fine-tuning: 
+- Fine-tune model trên dataset chọn 
+- Điều chỉnh: Learning rate/Batch size/Epoch 
+Optimization:  
+- So sánh optimizer: SGD vs Adam 
+- Learning rate scheduling: Cosine decay 
+- Data augmentation 
+Output  
+- Video output: Bounding box + label 
+- Metrics 
+- Visualization: Loss curve, Precision–Recall curve 
+ 
+Project 2: Chatbot hỏi đáp thông minh (Vietnamese QA chatbot). Sử dụng Transformer 
++ dữ liệu hội thoại tiếng Việt + optimization 
+1. Mục tiêu: Xây dựng chatbot có khả năng: 
+- Hiểu câu hỏi tiếng Việt 
+- Sinh câu trả lời phù hợp (context-aware) 
+- So sánh các kỹ thuật fine-tuning để cải thiện chất lượng hội thoại 
+2. Dataset: PhoATIS/ UIT-ViQuAD/ tự crawl từ Chat Facebook, Shopee, các hệ 
+thống chăm sóc khách hàng… 
+3. Kiến trúc hệ thống: 
+Pipeline: Data ➔ Tokenization ➔ Model ➔ Fine-tuning ➔ Evaluation ➔ Chat 
+Interface 
+--- Page 2 ---
+Có thể chọn 1 trong 2 hướng: 
+Hướng 1: QA dạng extractive 
+- Input: đoạn văn + câu hỏi 
+- Output: span trong đoạn văn 
+Model đề xuất: BERT/PhoBERT  
+Hướng 2: Chatbot sinh câu trả lời 
+- Input: hội thoại 
+- Output: câu trả lời 
+Model đề xuất: T5/GPT 
+4. Yêu cầu kỹ thuật  
+Base: 
+- Load pretrained BERT hoặc T5 
+- Fine-tune trên dataset 
+Optimization  
+- Learning Rate Tuning 
+- Batch Size: 8/16/32 
+Output  
+- Demo chatbot 
+- Metrics:  
++ Với QA : F1 score;  
++ Với chatbot generative: BLEU, ROUGE,  
+- Visualization: Loss curve, F1 theo epoch 
+ 
+Project 3: Nhận dạng và chuyển giọng nói thành văn bản (ASR) cho tiếng Việt 
+1. Mục tiêu: Xây dựng hệ thống: 
+- Nhận input: file audio (tiếng Việt) 
+- Output: văn bản tương ứng 
+- So sánh các kỹ thuật optimization để cải thiện độ chính xác  
+--- Page 3 ---
+2. Dataset: Common Voice Vietnamese/ VLSP Speech Corpus/ Tự thu âm giọng nói 
+(nhiễu, đa giọng) 
+3. Kiến trúc hệ thống: 
+Pipeline: Audio ➔ Feature extraction ➔ Model ➔ Decoding ➔ Text output 
+Có thể triển khai 1 trong 2 hướng:  
+Hướng 1: End-to-End ASR: Input:waveform➔ Output:text 
+Hướng 2: Encoder–Decoder (Seq2Seq) 
+4. Yêu cầu kỹ thuật: 
+Optimization: Learning Rate tuning/ Data Augmentation: Noise injection, Speed 
+perturbation, Time masking (SpecAugment)/ Batch Size: 4/8/16 
+Output  
+- Demo. Vd: Audio ➔ "Hôm nay trời đẹp" 
+- Visualization: Loss curve 
+Project 4: Phát hiện tin giả từ văn bản báo chí và mạng xã hội (Fake news detection) 
+1. Mục tiêu: Xây dựng hệ thống: 
+- Input: bài viết / post mạng xã hội 
+- Output: Real (tin thật)/Fake (tin giả) 
+- So sánh các kỹ thuật fine-tuning để cải thiện độ chính xác 
+2. Dataset: FakeNewsNet/ LIAR Dataset/ Crawl từ facebook hoặc báo chí Việt Nam 
+3. Kiến trúc mô hình: 
+Pipeline: Text ➔ Tokenization ➔ Model ➔ Fine-tuning ➔ Prediction ➔ Evaluation 
+Hướng triển khai: Text classification với Transformer (dùng BERT/PhoBERT) hoặc 
+dùng LSTM / GRU và so sánh với Transformer 
+4. Yêu cầu kỹ thuật : 
+Base:  
+- Train: LSTM/BERT 
+Optimization:  
+- Learning Rate tuning/ Dropout: so sánh 0.1/0.3/0.5/ Batch Size: 8 / 16 / 32 
+--- Page 4 ---
+- Metric: Accuracy/Precision/Recall/F1-score 
+Output: 
+- Demo: vd: Input: "Tin sốc: ..." ➔ Output: Fake 
+- So sánh, đánh giá 2 mô hình LSTM/BERT 
+- Visualization: Loss curve/F1 theo epoch 
+ 
+Project 5: Hệ thống khuyến nghị phim sử dụng deep learning (Embedding + RNN). 
+1. Mục tiêu: Xây dựng hệ thống: 
+- Dự đoán phim người dùng sẽ thích 
+- Dựa trên: Lịch sử xem / rating 
+- Sử dụng: Embedding + RNN (sequence modeling) 
+- So sánh các kỹ thuật optimization để cải thiện hiệu suất 
+ 
+2. Dataset: MovieLens 100K Dataset/MovieLens 1M Dataset gồm user_id, 
+movie_id, rating, timestamp 
+Task chính: Next-item recommendation 
+Dự đoán: Người dùng sẽ xem phim gì tiếp theo? 
+Input: User A: [Movie1 ➔ Movie5 ➔ Movie20 ➔ ?]➔ Output: ➔ MovieX 
+(recommendation) 
+3. Kiến trúc mô hình:  
+Thành phần chính: 
+Embedding layer: user embedding, movie embedding 
+Sequence modeling: RNN / LSTM / GRU 
+Output layer: Softmax trên tất cả movie 
+Pipeline: User sequence ➔ Embedding ➔ RNN ➔ Dense ➔ Softmax 
+4. Yêu cầu kỹ thuật : 
+Base:  
+- Model: Embedding + RNN 
+- So sánh model: RNN vs LSTM vs GRU (Phải có bảng so sánh) 
+Optimization :  
+--- Page 5 ---
+- Learning Rate tuning/Dropout/ Optimizer: SGD; Adam 
+- Metrics 
+Output : 
+- Demo: vd: User: đã xem [Titanic, Avatar, Inception] ➔ Gợi ý: Interstellar 
+- Bảng so sánh: LSTM vs GRU vs RNN 
+- Visualization: Loss curve 
+Project 6: Phát hiện hành vi gian lận giao dịch tài chính dựa trên chuỗi dữ liệu (Sequence 
+Modeling (RNN/LSTM/GRU) + Optimization + Imbalanced Learning) 
+1. Mục tiêu: Xây dựng hệ thống: 
+- Input: chuỗi giao dịch của một người dùng 
+- Output: Normal (hợp lệ)/Fraud (gian lận) 
+- So sánh các kỹ thuật optimization để tối ưu F1 / Recall (fraud) 
+2. Dataset: Credit Card Fraud Detection Dataset (Kaggle) (imbalanced (fraud < 1%))/ 
+IEEE-CIS Fraud Detection Dataset 
+Task chính: 
+Sequence classification 
+Input: User A:  
+                        [t1, t2, t3, t4, t5] 
+Output: ➔ Fraud / Normal 
+3. Kiến trúc mô hình: 
+Pipeline: Transaction sequence ➔ Embedding / Feature ➔ RNN ➔ Dense ➔ Sigmoid 
+ 
+4. Yêu cầu kỹ thuật: Model cần triển khai: RNN/LSTM/GRU. So sánh 3 model 
+Base:  
+- RNN-based model 
+Optimization:  
+- Learning Rate tuning/ Dropout /Optimizer: SGD vs Adam 
+Metrics:  
+- Precision/Recall/F1-score 
+Output: 
+--- Page 6 ---
+- Demo. Vd: Input: chuỗi giao dịch ➔ Output: Fraud (0.92) 
+- Bảng so sánh hiệu suất 3 model RNN vs LSTM vs GRU 
+- Visualization: Loss curve/Precision–Recall curve 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 

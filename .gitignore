@@ -1,0 +1,18 @@
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Model checkpoints (they should be loaded from Google Drive or trained on Colab)
+models/*.pt
+
+# User-specific or system files
+.DS_Store
+.vscode/
+.idea/
