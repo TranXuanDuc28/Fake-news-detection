@@ -105,11 +105,11 @@ def evaluate(model, dataloader, criterion, device, model_type, return_prediction
         return metrics, all_preds, all_targets
     return metrics
 
-def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False):
+def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5):
     os.makedirs(save_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\n--- Training {model_type.upper()} model on device: {device} ---")
-    print(f"Params: Epochs={epochs}, BatchSize={batch_size}, LR={lr}, Dropout={dropout}, Subset={subset_size}, Oversample={oversample}, UseClassWeights={use_class_weights}")
+    print(f"Params: Epochs={epochs}, BatchSize={batch_size}, LR={lr}, Dropout={dropout}, Subset={subset_size}, Oversample={oversample}, UseClassWeights={use_class_weights}, Patience={patience}")
     
     # Get DataLoaders
     if model_type == "lstm":
@@ -150,11 +150,13 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
         criterion = nn.CrossEntropyLoss()
         
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    # Define learning rate scheduler (halves learning rate if validation F1 does not improve for 2 epochs)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=2)
     
     best_val_f1 = -1.0
+    patience_counter = 0
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_f1": [], "val_acc": []}
 
-    
     for epoch in range(epochs):
         train_loss, train_acc = train_epoch(model, train_loader, optimizer, criterion, device, model_type)
         val_metrics = evaluate(model, val_loader, criterion, device, model_type)
@@ -166,14 +168,22 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
         history["val_f1"].append(val_metrics["f1_binary"])
         history["val_acc"].append(val_metrics["accuracy"])
         
+        current_lr = optimizer.param_groups[0]['lr']
+        # Step the scheduler based on validation F1 score
+        scheduler.step(val_metrics["f1_binary"])
+        new_lr = optimizer.param_groups[0]['lr']
+        if new_lr < current_lr:
+            print(f"--> Tốc độ học (Learning Rate) giảm từ {current_lr:.6f} xuống {new_lr:.6f}")
+        
         print(f"Epoch {epoch+1:02d}/{epochs:02d} | "
               f"Train Loss: {train_loss:.4f} | Train Acc: {train_acc*100:.2f}% | "
               f"Val Loss: {val_metrics['loss']:.4f} | Val F1 (Bin): {val_metrics['f1_binary']*100:.2f}% | "
-              f"Val Acc: {val_metrics['accuracy']*100:.2f}%")
+              f"Val Acc: {val_metrics['accuracy']*100:.2f}% | LR: {new_lr:.6f}")
         
         # Save best checkpoint (based on binary F1-score)
         if val_metrics["f1_binary"] > best_val_f1:
             best_val_f1 = val_metrics["f1_binary"]
+            patience_counter = 0
             best_model_path = os.path.join(save_dir, f"best_{model_type}.pt")
             
             # Save weights and metadata
@@ -181,7 +191,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
                 "model_state_dict": model.state_dict(),
                 "model_type": model_type,
                 "hyperparameters": {
-                    "lr": lr,
+                    "lr": new_lr,
                     "dropout": dropout,
                     "batch_size": batch_size,
                     "freeze_backbone": freeze_backbone if model_type == "transformer" else None
@@ -196,6 +206,11 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
             meta_path = os.path.join(save_dir, f"best_{model_type}_meta.json")
             with open(meta_path, "w", encoding="utf-8") as f:
                 json.dump(val_metrics, f, indent=4)
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"\n--> Early Stopping kích hoạt! Không cải thiện trên validation F1 trong {patience} epoch liên tiếp.")
+                break
                 
     # Evaluate best model on test set
     print(f"\nEvaluating best {model_type.upper()} model on Test Set...")
@@ -223,7 +238,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train LSTM/Transformer model for Vietnamese Fake News Detection")
     parser.add_argument("--model", type=str, default="lstm", choices=["lstm", "transformer"], help="Model type to train")
-    parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs")
+    parser.add_argument("--epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, choices=[8, 16, 32], help="Batch size")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
     parser.add_argument("--dropout", type=float, default=0.3, choices=[0.1, 0.3, 0.5], help="Dropout rate")
@@ -234,6 +249,7 @@ if __name__ == "__main__":
     parser.add_argument("--save_dir", type=str, default="models", help="Directory to save model checkpoints")
     parser.add_argument("--data_dir", type=str, default="data", help="Directory where dataset files are located")
     parser.add_argument("--history_file", type=str, default=None, help="Optional path to save final training history JSON")
+    parser.add_argument("--patience", type=int, default=5, help="Patience epochs for early stopping")
     
     args = parser.parse_args()
     
@@ -249,7 +265,8 @@ if __name__ == "__main__":
         save_dir=args.save_dir,
         data_dir=args.data_dir,
         oversample=args.oversample,
-        use_class_weights=args.use_class_weights
+        use_class_weights=args.use_class_weights,
+        patience=args.patience
     )
     
     if args.history_file:
