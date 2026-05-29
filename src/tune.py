@@ -22,10 +22,7 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     is_gpu = torch.cuda.is_available()
     
-    # We will use a subset for tuning to ensure it runs quickly.
-    # On CPU: 800 samples is fast. On GPU (Colab): 2000 samples is fast.
-    if subset_size is None:
-        subset_size = 2000 if is_gpu else 800
+    # We will use the entire dataset for tuning unless a subset_size is explicitly provided.
     
     results = {
         "lstm": {
@@ -54,7 +51,7 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
     print("="*50)
     print("STARTING HYPERPARAMETER TUNING SWEEP")
     print(f"Hardware: {'GPU (Full Fine-tuning)' if is_gpu else 'CPU (Frozen Backbone)'}")
-    print(f"Tuning Subset Size: {subset_size} | Epochs per run: {epochs}")
+    print(f"Tuning Subset Size: {subset_size if subset_size is not None else 'Full Dataset'} | Epochs per run: {epochs}")
     print(f"Saving checkpoints to: {save_dir}")
     print(f"Loading data from: {data_dir}")
     print("="*50)
