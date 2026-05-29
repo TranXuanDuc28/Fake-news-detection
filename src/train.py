@@ -12,6 +12,7 @@ import argparse
 import json
 import torch
 import torch.nn as nn
+import numpy as np
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from src.data_loader import get_dataloaders
@@ -118,26 +119,147 @@ def evaluate(model, dataloader, criterion, device, model_type, return_prediction
         return metrics, all_preds, all_targets
     return metrics
 
-def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5, resume=True, transformer_model_name="vinai/phobert-base", segment_words=None):
+def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
+    """
+    Downloads and loads the PhoW2V Vietnamese pre-trained embeddings (100 dimensions).
+    Maps the vocabulary of our dataset to the pre-trained vectors.
+    """
+    import urllib.request
+    import zipfile
+    
+    # 1. Choose syllable or word level
+    if segment_words:
+        url = "https://public.vinai.io/word2vec_vi_words_100dims.zip"
+        zip_name = "word2vec_vi_words_100dims.zip"
+        txt_name = "word2vec_vi_words_100dims.txt"
+    else:
+        url = "https://public.vinai.io/word2vec_vi_syllables_100dims.zip"
+        zip_name = "word2vec_vi_syllables_100dims.zip"
+        txt_name = "word2vec_vi_syllables_100dims.txt"
+        
+    os.makedirs(data_dir, exist_ok=True)
+    zip_path = os.path.join(data_dir, zip_name)
+    txt_path = os.path.join(data_dir, txt_name)
+    
+    # 2. Download zip file if not exists
+    if not os.path.exists(txt_path):
+        if not os.path.exists(zip_path):
+            print(f"--> Downloading PhoW2V pre-trained embeddings from {url}...")
+            try:
+                req = urllib.request.Request(
+                    url, 
+                    headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                )
+                with urllib.request.urlopen(req) as response, open(zip_path, 'wb') as out_file:
+                    out_file.write(response.read())
+                print("--> Download completed successfully!")
+            except Exception as e:
+                print(f"--> Error downloading embeddings: {e}")
+                return None
+        
+        # Unzip
+        print(f"--> Extracting {zip_name}...")
+        try:
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                txt_files = [f for f in zip_ref.namelist() if f.endswith('.txt')]
+                if txt_files:
+                    target_file = txt_files[0]
+                    zip_ref.extract(target_file, data_dir)
+                    extracted_path = os.path.join(data_dir, target_file)
+                    if extracted_path != txt_path:
+                        if os.path.exists(txt_path):
+                            os.remove(txt_path)
+                        os.rename(extracted_path, txt_path)
+                else:
+                    zip_ref.extractall(data_dir)
+            print("--> Extraction completed!")
+            if os.path.exists(zip_path):
+                os.remove(zip_path)
+        except Exception as e:
+            print(f"--> Error extracting zip file: {e}")
+            return None
+
+    # 3. Read txt file and load vectors
+    print(f"--> Loading pre-trained vectors from {txt_path}...")
+    pretrained_dict = {}
+    embedding_dim = 100
+    try:
+        with open(txt_path, 'r', encoding='utf-8', errors='ignore') as f:
+            for i, line in enumerate(f):
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split()
+                if i == 0 and len(parts) <= 2:
+                    continue
+                word = parts[0]
+                try:
+                    vector = [float(x) for x in parts[1:]]
+                    if len(vector) == embedding_dim:
+                        pretrained_dict[word] = vector
+                except ValueError:
+                    continue
+        print(f"--> Loaded {len(pretrained_dict)} pre-trained word vectors.")
+    except Exception as e:
+        print(f"--> Error reading embeddings file: {e}")
+        return None
+        
+    # 4. Map to our vocabulary
+    vocab_size = len(vocab_w2i)
+    weight_matrix = np.random.normal(scale=0.6, size=(vocab_size, embedding_dim))
+    weight_matrix[0] = np.zeros(embedding_dim)
+    
+    matched_count = 0
+    for word, idx in vocab_w2i.items():
+        if idx == 0:
+            continue
+        vec = pretrained_dict.get(word, None)
+        if vec is None:
+            vec = pretrained_dict.get(word.replace(" ", "_"), None)
+            
+        if vec is not None:
+            weight_matrix[idx] = np.array(vec)
+            matched_count += 1
+            
+    print(f"--> Vocab coverage: {matched_count}/{vocab_size} words ({matched_count/vocab_size:.2%}) initialized from pre-trained PhoW2V.")
+    return torch.tensor(weight_matrix, dtype=torch.float32)
+
+def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5, resume=True, transformer_model_name="vinai/phobert-base", segment_words=None, embedding_dim=64, hidden_dim=64, use_pretrained_emb=False):
     os.makedirs(save_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\n--- Training {model_type.upper()} model on device: {device} ---")
     
+    # Enforce embedding_dim = 100 if use_pretrained_emb is active
+    if model_type == "lstm" and use_pretrained_emb:
+        embedding_dim = 100
+        
     # Resolve segment_words actual value for printing
     resolved_segment_words = segment_words if segment_words is not None else ("phobert" in transformer_model_name.lower() if model_type == "transformer" else False)
-    print(f"Params: Epochs={epochs}, BatchSize={batch_size}, LR={lr}, Dropout={dropout}, Subset={subset_size}, Oversample={oversample}, UseClassWeights={use_class_weights}, Patience={patience}, SegmentWords={resolved_segment_words}")
+    print(f"Params: Epochs={epochs}, BatchSize={batch_size}, LR={lr}, Dropout={dropout}, Subset={subset_size}, Oversample={oversample}, UseClassWeights={use_class_weights}, Patience={patience}, SegmentWords={resolved_segment_words}, EmbeddingDim={embedding_dim}, HiddenDim={hidden_dim}, UsePretrainedEmb={use_pretrained_emb}")
     
     # Get DataLoaders
     if model_type == "lstm":
         train_loader, val_loader, test_loader, vocab = get_dataloaders(
             data_dir=data_dir, model_type="lstm", batch_size=batch_size, subset_size=subset_size, oversample=oversample, segment_words=segment_words
         )
+        
+        pretrained_weights = None
+        if use_pretrained_emb:
+            pretrained_weights = load_pretrained_embeddings(vocab.word2idx, segment_words=resolved_segment_words, data_dir=data_dir)
+            if pretrained_weights is None:
+                print("--> WARNING: Failed to load pre-trained embeddings. Falling back to random initialization.")
+                use_pretrained_emb = False
+                embedding_dim = 64  # Reset to default
+                
         model = BiLSTMClassifier(
             vocab_size=vocab.vocab_size,
-            embedding_dim=128,
-            hidden_dim=128,
+            embedding_dim=embedding_dim,
+            hidden_dim=hidden_dim,
             dropout=dropout
         )
+        
+        if pretrained_weights is not None:
+            model.embedding.weight.data.copy_(pretrained_weights)
     else: # transformer
         train_loader, val_loader, test_loader, tokenizer = get_dataloaders(
             data_dir=data_dir, model_type="transformer", batch_size=batch_size, subset_size=subset_size, oversample=oversample, tokenizer_name=transformer_model_name, segment_words=segment_words
@@ -232,6 +354,9 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
                     "dropout": dropout,
                     "batch_size": batch_size,
                     "segment_words": resolved_segment_words,
+                    "embedding_dim": embedding_dim if model_type == "lstm" else None,
+                    "hidden_dim": hidden_dim if model_type == "lstm" else None,
+                    "use_pretrained_emb": use_pretrained_emb if model_type == "lstm" else None,
                     "freeze_backbone": freeze_backbone if model_type == "transformer" else None,
                     "transformer_model_name": transformer_model_name if model_type == "transformer" else None
                 }
@@ -317,6 +442,9 @@ if __name__ == "__main__":
     parser.add_argument("--no_segment_words", action="store_false", dest="segment_words", help="Disable Vietnamese word segmentation")
     
     parser.add_argument("--transformer_model_name", type=str, default="vinai/phobert-base", help="Pre-trained transformer model name (e.g. vinai/phobert-base, distilbert-base-multilingual-cased)")
+    parser.add_argument("--embedding_dim", type=int, default=64, help="Embedding dimension for LSTM model")
+    parser.add_argument("--hidden_dim", type=int, default=64, help="Hidden dimension for LSTM model")
+    parser.add_argument("--use_pretrained_emb", action="store_true", help="Use pre-trained PhoW2V word embeddings for LSTM")
     
     args = parser.parse_args()
     
@@ -336,7 +464,10 @@ if __name__ == "__main__":
         patience=args.patience,
         resume=args.resume,
         transformer_model_name=args.transformer_model_name,
-        segment_words=args.segment_words
+        segment_words=args.segment_words,
+        embedding_dim=args.embedding_dim,
+        hidden_dim=args.hidden_dim,
+        use_pretrained_emb=args.use_pretrained_emb
     )
     
     if args.history_file:

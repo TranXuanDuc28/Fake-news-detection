@@ -258,15 +258,20 @@ def load_pytorch_models(lstm_p, trans_p):
             vocab_w2i = checkpoint["vocab_word2idx"]
             vocab = VocabHelper(vocab_w2i)
             
-            lstm_segment = checkpoint.get("hyperparameters", {}).get("segment_words", False)
+            hyperparams = checkpoint.get("hyperparameters", {})
+            lstm_segment = hyperparams.get("segment_words", False)
+            embedding_dim = hyperparams.get("embedding_dim", 128)
+            hidden_dim = hyperparams.get("hidden_dim", 128)
+            if embedding_dim is None: embedding_dim = 128
+            if hidden_dim is None: hidden_dim = 128
             
             # Import BiLSTM here to avoid import problems
             from src.lstm_model import BiLSTMClassifier
             lstm_model = BiLSTMClassifier(
                 vocab_size=len(vocab_w2i),
-                embedding_dim=128,
-                hidden_dim=128,
-                dropout=checkpoint["hyperparameters"]["dropout"]
+                embedding_dim=embedding_dim,
+                hidden_dim=hidden_dim,
+                dropout=hyperparams.get("dropout", 0.3)
             )
             lstm_model.load_state_dict(checkpoint["model_state_dict"])
             lstm_model.eval()

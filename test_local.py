@@ -151,14 +151,19 @@ def load_lstm_model(model_path, device):
         vocab_w2i = checkpoint["vocab_word2idx"]
         vocab = VocabHelper(vocab_w2i)
         
-        segment_words = checkpoint.get("hyperparameters", {}).get("segment_words", False)
+        hyperparams = checkpoint.get("hyperparameters", {})
+        segment_words = hyperparams.get("segment_words", False)
+        embedding_dim = hyperparams.get("embedding_dim", 128)
+        hidden_dim = hyperparams.get("hidden_dim", 128)
+        if embedding_dim is None: embedding_dim = 128
+        if hidden_dim is None: hidden_dim = 128
         
         from src.lstm_model import BiLSTMClassifier
         model = BiLSTMClassifier(
             vocab_size=len(vocab_w2i),
-            embedding_dim=128,
-            hidden_dim=128,
-            dropout=checkpoint["hyperparameters"].get("dropout", 0.3)
+            embedding_dim=embedding_dim,
+            hidden_dim=hidden_dim,
+            dropout=hyperparams.get("dropout", 0.3)
         )
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)
