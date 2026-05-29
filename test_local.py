@@ -134,11 +134,131 @@ TEST_CASES = [
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Kỳ thi tốt nghiệp THPT năm nay sẽ được tổ chức trong hai ngày với bốn bài thi độc lập, đảm bảo quy chế phòng thi nghiêm ngặt trên cả nước.",
+        "text": "Kỳ thi tốt nghiệp THPT năm nay sẽ được tổ chức trong hai ngày với đóng góp của bốn bài thi độc lập, đảm bảo quy chế phòng thi nghiêm ngặt trên cả nước.",
         "label": "TIN THẬT (REAL)"
     },
     {
         "text": "Bí quyết trường thọ cực kỳ đơn giản: Chỉ cần ăn một quả chuối chín đắp lá lốt nướng vào mỗi buổi tối sẽ tiêu diệt hoàn toàn độc tố tích tụ trong gan cả đời.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Tổ chức Y tế Thế giới (WHO) khuyến nghị tăng cường giám sát các biến thể mới của virus SARS-CoV-2 nhằm chủ động ứng phó dịch bệnh.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Tin nóng Bình Dương: Phát hiện ổ dịch mới nguy hiểm với hơn 500 người nhiễm bệnh, chính quyền đang chuẩn bị phong tỏa toàn thành phố từ đêm nay.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Ngân hàng Thương mại Cổ phần Sài Gòn (SCB) công bố biểu phí dịch vụ tài khoản mới áp dụng cho khách hàng cá nhân kể từ đầu tháng sau.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Cảnh báo khẩn: Tập đoàn Vạn Thịnh Phát câu kết với ngân hàng để chiếm đoạt toàn bộ sổ tiết kiệm của khách hàng gửi tiền, người dân hãy đến rút sạch tiền ngay lập tức!",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Sở Giáo dục và Đào tạo Hà Nội thông báo lịch nghỉ Tết Nguyên đán chính thức của học sinh các cấp trên địa bàn thành phố.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Ăn lá đu đủ đun sôi cùng sả trong 10 ngày sẽ làm tiêu biến hoàn toàn khối u ung thư cổ tử cung, bài thuốc dân gian thần kỳ không cần hóa trị.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Bộ Tài chính đề xuất giảm thuế giá trị gia tăng (VAT) từ 10% xuống 8% đối với một số nhóm hàng hóa, dịch vụ trong năm nay.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Chấn động: Một phụ nữ tại Hải Phòng sinh ra em bé có cánh và biết bay ngay khi vừa chào đời, các nhà khoa học đang đến nghiên cứu trực tiếp.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Thủ tướng Phạm Minh Chính chủ trì cuộc họp thường kỳ chính phủ đánh giá tình hình kinh tế - xã hội tháng qua và bàn giải pháp thúc đẩy đầu tư công.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Cảnh báo lừa đảo: Cuộc gọi giả danh cơ quan công an yêu cầu chuyển tiền vào tài khoản tạm giữ để phục vụ điều tra chuyên án ma túy.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Thần y tiết lộ: Chỉ cần nhỏ 3 giọt nước cốt tỏi vào mắt mỗi tối sẽ trị dứt điểm mọi bệnh cận thị, loạn thị mà không cần phẫu thuật.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Ủy ban Thường vụ Quốc hội cho ý kiến về dự án Luật Bảo hiểm xã hội sửa đổi, tập trung vào các chế độ rút bảo hiểm một lần.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Nhật Bản phát minh ra loại vaccine mới có thể ngăn ngừa lão hóa và giúp con người trẻ mãi không già, dự kiến bán ra thị trường năm sau.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Tổng cục Thống kê công báo chỉ số giá tiêu dùng (CPI) tăng nhẹ so với cùng kỳ năm trước, lạm phát vẫn trong tầm kiểm soát.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Tin giật gân: Trùm phát xít Hitler vẫn còn sống ở tuổi 135 tại một căn hầm bí mật ở Nam Cực và đang chuẩn bị lực lượng quay trở lại thế giới.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Công ty Điện lực Việt Nam (EVN) khuyến nghị người dân tiết kiệm điện trong những ngày nắng nóng đỉnh điểm để tránh quá tải hệ thống.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Phương pháp giảm cân thần tốc: Chỉ cần uống hỗn hợp giấm ăn và muối trắng thay nước lọc mỗi ngày sẽ giảm ngay 15kg trong một tuần.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Bộ Công an triệt phá đường dây đánh bạc qua mạng với quy mô giao dịch lên đến hàng nghìn tỷ đồng, bắt giữ hàng chục đối tượng liên quan.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Tập đoàn công nghệ Apple chính thức ra mắt dòng sản phẩm kính thực tế ảo mới với nhiều cải tiến công nghệ đột phá tại Mỹ.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Bí mật vũ trụ: Các nhà du hành vũ trụ phát hiện căn cứ của người ngoài hành tinh trên vùng tối của Mặt Trăng nhưng bị Mỹ ép ký cam kết bảo mật.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Việt Nam xuất khẩu lô xoài cát Hòa Lộc đầu tiên sang thị trường Hoa Kỳ sau khi vượt qua các tiêu chuẩn kiểm dịch thực vật nghiêm ngặt.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Khẩn cấp: Sóng thần cao 50 mét đang hướng thẳng vào các tỉnh ven biển miền Trung Việt Nam sau trận động đất mạnh ở Thái Bình Dương.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Bộ Y tế cấp phép lưu hành cho vắc xin phòng bệnh sốt xuất huyết đầu tiên tại Việt Nam, bắt đầu tiêm chủng dịch vụ cho người dân.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Uống nước tiểu của chính mình mỗi sáng là phương pháp thanh lọc cơ thể, thải sạch mọi độc tố và ngăn ngừa hoàn toàn bệnh tiểu đường.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Nhiều địa phương trên cả nước tổ chức lễ ra quân hưởng ứng Ngày Môi trường Thế giới, tiến hành dọn rác và trồng cây xanh.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Mạng di động 6G chính thức phủ sóng toàn cầu từ hôm nay, cho phép truyền tải dữ liệu nhanh gấp 1000 lần mạng 5G thông thường.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Vận động viên Nguyễn Thị Oanh xuất sắc giành huy chương vàng cự ly 3.000m vượt chướng ngại vật tại giải điền kinh vô địch châu Á.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Xem bói nốt ruồi trực tuyến đoán trước tương lai giàu sang hay nghèo khổ cực chuẩn, bấm vào link này để được thầy phán miễn phí.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Hội đồng Bảo an Liên Hợp Quốc thông qua nghị quyết kêu gọi các bên ngừng bắn ngay lập tức và tăng cường viện trợ nhân đạo tại khu vực xung đột.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Cảnh báo khẩn: Trái Đất sẽ mất hoàn toàn trọng lực trong vòng 2 giờ vào ngày mai do ảnh hưởng từ bão mặt trời siêu mạnh.",
         "label": "TIN GIẢ (FAKE)"
     }
 ]
