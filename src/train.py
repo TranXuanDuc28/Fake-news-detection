@@ -12,6 +12,7 @@ import argparse
 import json
 import torch
 import torch.nn as nn
+from tqdm import tqdm
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from src.data_loader import get_dataloaders
 from src.lstm_model import BiLSTMClassifier
@@ -29,7 +30,9 @@ def train_epoch(model, dataloader, optimizer, criterion, device, model_type):
     all_preds = []
     all_targets = []
     
-    for batch in dataloader:
+    # Wrap dataloader in a beautiful tqdm progress bar
+    progress_bar = tqdm(dataloader, desc="  Training", leave=False)
+    for batch in progress_bar:
         optimizer.zero_grad()
         
         if model_type == "lstm":
@@ -46,10 +49,14 @@ def train_epoch(model, dataloader, optimizer, criterion, device, model_type):
         loss.backward()
         optimizer.step()
         
-        total_loss += loss.item()
+        loss_val = loss.item()
+        total_loss += loss_val
         preds = torch.argmax(outputs, dim=1).cpu().numpy()
         all_preds.extend(preds)
         all_targets.extend(targets.cpu().numpy())
+        
+        # Display current loss in the progress bar
+        progress_bar.set_postfix({"loss": f"{loss_val:.4f}"})
         
     avg_loss = total_loss / len(dataloader)
     acc = accuracy_score(all_targets, all_preds)
@@ -62,8 +69,10 @@ def evaluate(model, dataloader, criterion, device, model_type, return_prediction
     all_preds = []
     all_targets = []
     
+    # Wrap validation dataloader in a tqdm progress bar
+    progress_bar = tqdm(dataloader, desc="  Evaluating", leave=False)
     with torch.no_grad():
-        for batch in dataloader:
+        for batch in progress_bar:
             if model_type == "lstm":
                 inputs, targets = batch
                 inputs, targets = inputs.to(device), targets.to(device)
@@ -75,11 +84,15 @@ def evaluate(model, dataloader, criterion, device, model_type, return_prediction
                 outputs = model(input_ids=input_ids, attention_mask=attention_mask)
                 
             loss = criterion(outputs, targets)
-            total_loss += loss.item()
+            loss_val = loss.item()
+            total_loss += loss_val
             
             preds = torch.argmax(outputs, dim=1).cpu().numpy()
             all_preds.extend(preds)
             all_targets.extend(targets.cpu().numpy())
+            
+            # Display current loss in the progress bar
+            progress_bar.set_postfix({"loss": f"{loss_val:.4f}"})
             
     avg_loss = total_loss / len(dataloader)
     
