@@ -65,10 +65,11 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
     # 1. LSTM Dropout Sweep (0.1, 0.3, 0.5)
     for dp in [0.1, 0.3, 0.5]:
         print(f"\n[LSTM Sweep] Testing Dropout = {dp}")
+        run_save_dir = os.path.join(save_dir, f"lstm_lr{default_lstm_lr}_bs{default_lstm_batch}_dp{dp}")
         history, test_m = train_model(
             model_type="lstm", epochs=epochs, batch_size=default_lstm_batch,
             lr=default_lstm_lr, dropout=dp, subset_size=subset_size,
-            save_dir=save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir
         )
         results["lstm"]["dropout_sweep"][str(dp)] = {
             "val_f1_history": history["val_f1"],
@@ -79,10 +80,11 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
     # 2. LSTM Batch Size Sweep (8, 16, 32)
     for bs in [8, 16, 32]:
         print(f"\n[LSTM Sweep] Testing Batch Size = {bs}")
+        run_save_dir = os.path.join(save_dir, f"lstm_lr{default_lstm_lr}_bs{bs}_dp{default_lstm_dropout}")
         history, test_m = train_model(
             model_type="lstm", epochs=epochs, batch_size=bs,
             lr=default_lstm_lr, dropout=default_lstm_dropout, subset_size=subset_size,
-            save_dir=save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir
         )
         results["lstm"]["batch_size_sweep"][str(bs)] = {
             "val_f1_history": history["val_f1"],
@@ -93,10 +95,11 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
     # 3. LSTM Learning Rate Sweep (1e-4, 1e-3, 5e-3)
     for lr in [1e-4, 1e-3, 5e-3]:
         print(f"\n[LSTM Sweep] Testing Learning Rate = {lr}")
+        run_save_dir = os.path.join(save_dir, f"lstm_lr{lr}_bs{default_lstm_batch}_dp{default_lstm_dropout}")
         history, test_m = train_model(
             model_type="lstm", epochs=epochs, batch_size=default_lstm_batch,
             lr=lr, dropout=default_lstm_dropout, subset_size=subset_size,
-            save_dir=save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir
         )
         results["lstm"]["lr_sweep"][str(lr)] = {
             "val_f1_history": history["val_f1"],
@@ -110,10 +113,11 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
     # 1. Transformer Dropout Sweep (0.1, 0.3, 0.5)
     for dp in [0.1, 0.3, 0.5]:
         print(f"\n[Transformer Sweep] Testing Dropout = {dp}")
+        run_save_dir = os.path.join(save_dir, f"transformer_lr{default_trans_lr}_bs{default_trans_batch}_dp{dp}")
         history, test_m = train_model(
             model_type="transformer", epochs=epochs, batch_size=default_trans_batch,
             lr=default_trans_lr, dropout=dp, freeze_backbone=freeze_backbone, subset_size=subset_size,
-            save_dir=save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir
         )
         results["transformer"]["dropout_sweep"][str(dp)] = {
             "val_f1_history": history["val_f1"],
@@ -124,10 +128,11 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
     # 2. Transformer Batch Size Sweep (8, 16, 32)
     for bs in [8, 16, 32]:
         print(f"\n[Transformer Sweep] Testing Batch Size = {bs}")
+        run_save_dir = os.path.join(save_dir, f"transformer_lr{default_trans_lr}_bs{bs}_dp{default_trans_dropout}")
         history, test_m = train_model(
             model_type="transformer", epochs=epochs, batch_size=bs,
             lr=default_trans_lr, dropout=default_trans_dropout, freeze_backbone=freeze_backbone, subset_size=subset_size,
-            save_dir=save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir
         )
         results["transformer"]["batch_size_sweep"][str(bs)] = {
             "val_f1_history": history["val_f1"],
@@ -140,10 +145,11 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
     lrs = [1e-5, 2e-5, 5e-5] if is_gpu else [1e-3, 2e-3, 5e-3]
     for lr in lrs:
         print(f"\n[Transformer Sweep] Testing Learning Rate = {lr}")
+        run_save_dir = os.path.join(save_dir, f"transformer_lr{lr}_bs{default_trans_batch}_dp{default_trans_dropout}")
         history, test_m = train_model(
             model_type="transformer", epochs=epochs, batch_size=default_trans_batch,
             lr=lr, dropout=default_trans_dropout, freeze_backbone=freeze_backbone, subset_size=subset_size,
-            save_dir=save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir
         )
         results["transformer"]["lr_sweep"][str(lr)] = {
             "val_f1_history": history["val_f1"],
