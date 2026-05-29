@@ -289,5 +289,64 @@ def run_local_test():
                 
         print("-" * 80)
 
+    # === CHẾ ĐỘ TƯƠNG TÁC TỪ NGƯỜI DÙNG ===
+    print("\n" + "="*80)
+    print(f"{CYAN}{BOLD}CHẾ ĐỘ TƯƠNG TÁC: NHẬP VĂN BẢN ĐỂ DỰ ĐOÁN TIN GIẢ{RESET}")
+    print("="*80)
+    print("Bạn có thể tự nhập bất kỳ tin tức nào dưới đây để kiểm tra dự đoán.")
+    print("Nhập 'exit' hoặc 'q' để thoát chế độ tương tác.\n")
+    
+    while True:
+        try:
+            print(f"{BOLD}Nhập tin tức cần kiểm tra:{RESET}")
+            user_text = input("> ").strip()
+            if not user_text:
+                continue
+            if user_text.lower() in ["exit", "q", "quit"]:
+                print(f"{YELLOW}Đã thoát chế độ tương tác.{RESET}")
+                break
+                
+            print("-" * 50)
+            
+            # 1. Dự đoán bằng BiLSTM
+            if lstm_model:
+                try:
+                    inputs = lstm_vocab.encode(user_text, max_len=128, segment_words=lstm_segment).to(device)
+                    with torch.no_grad():
+                        logits = lstm_model(inputs)
+                        probs = torch.softmax(logits, dim=1).squeeze(0)
+                        prob_fake = probs[1].item()
+                        prob_real = probs[0].item()
+                    
+                    pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= 0.5 else f"{GREEN}TIN THẬT (REAL){RESET}"
+                    confidence = prob_fake if prob_fake >= 0.5 else prob_real
+                    print(f"  └─ {BOLD}[BiLSTM]:{RESET}      {pred_label} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+                except Exception as e:
+                    print(f"  └─ [BiLSTM]: Lỗi dự đoán - {e}")
+                    
+            # 2. Dự đoán bằng Transformer
+            if trans_model:
+                try:
+                    cleaned_text = clean_vietnamese_text(user_text, segment_words=trans_segment)
+                    inputs = trans_tokenizer(cleaned_text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
+                    input_ids = inputs["input_ids"].to(device)
+                    attention_mask = inputs["attention_mask"].to(device)
+                    with torch.no_grad():
+                        logits = trans_model(input_ids=input_ids, attention_mask=attention_mask)
+                        probs = torch.softmax(logits, dim=1).squeeze(0)
+                        prob_fake = probs[1].item()
+                        prob_real = probs[0].item()
+                    
+                    pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= 0.5 else f"{GREEN}TIN THẬT (REAL){RESET}"
+                    confidence = prob_fake if prob_fake >= 0.5 else prob_real
+                    print(f"  └─ {BOLD}[Transformer]:{RESET} {pred_label} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+                except Exception as e:
+                    print(f"  └─ [Transformer]: Lỗi dự đoán - {e}")
+                    
+            print("-" * 50 + "\n")
+        except KeyboardInterrupt:
+            print(f"\n{YELLOW}Đã thoát chế độ tương tác.{RESET}")
+            break
+
 if __name__ == "__main__":
     run_local_test()
