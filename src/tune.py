@@ -17,7 +17,7 @@ from src.transformer_model import TransformerClassifier
 from src.train import train_model
 
 
-def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tuning_results.json", epochs=3, subset_size=None):
+def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tuning_results.json", epochs=3, subset_size=None, oversample=True, use_class_weights=False):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     is_gpu = torch.cuda.is_available()
@@ -69,7 +69,8 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
         history, test_m = train_model(
             model_type="lstm", epochs=epochs, batch_size=default_lstm_batch,
             lr=default_lstm_lr, dropout=dp, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir,
+            oversample=oversample, use_class_weights=use_class_weights
         )
         results["lstm"]["dropout_sweep"][str(dp)] = {
             "val_f1_history": history["val_f1"],
@@ -84,7 +85,8 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
         history, test_m = train_model(
             model_type="lstm", epochs=epochs, batch_size=bs,
             lr=default_lstm_lr, dropout=default_lstm_dropout, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir,
+            oversample=oversample, use_class_weights=use_class_weights
         )
         results["lstm"]["batch_size_sweep"][str(bs)] = {
             "val_f1_history": history["val_f1"],
@@ -99,7 +101,8 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
         history, test_m = train_model(
             model_type="lstm", epochs=epochs, batch_size=default_lstm_batch,
             lr=lr, dropout=default_lstm_dropout, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir,
+            oversample=oversample, use_class_weights=use_class_weights
         )
         results["lstm"]["lr_sweep"][str(lr)] = {
             "val_f1_history": history["val_f1"],
@@ -117,7 +120,8 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
         history, test_m = train_model(
             model_type="transformer", epochs=epochs, batch_size=default_trans_batch,
             lr=default_trans_lr, dropout=dp, freeze_backbone=freeze_backbone, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir,
+            oversample=oversample, use_class_weights=use_class_weights
         )
         results["transformer"]["dropout_sweep"][str(dp)] = {
             "val_f1_history": history["val_f1"],
@@ -132,7 +136,8 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
         history, test_m = train_model(
             model_type="transformer", epochs=epochs, batch_size=bs,
             lr=default_trans_lr, dropout=default_trans_dropout, freeze_backbone=freeze_backbone, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir,
+            oversample=oversample, use_class_weights=use_class_weights
         )
         results["transformer"]["batch_size_sweep"][str(bs)] = {
             "val_f1_history": history["val_f1"],
@@ -149,7 +154,8 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
         history, test_m = train_model(
             model_type="transformer", epochs=epochs, batch_size=default_trans_batch,
             lr=lr, dropout=default_trans_dropout, freeze_backbone=freeze_backbone, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir
+            save_dir=run_save_dir, data_dir=data_dir,
+            oversample=oversample, use_class_weights=use_class_weights
         )
         results["transformer"]["lr_sweep"][str(lr)] = {
             "val_f1_history": history["val_f1"],
@@ -173,6 +179,8 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=str, default="data/tuning_results.json", help="Path to save tuning results JSON file")
     parser.add_argument("--epochs", type=int, default=3, help="Number of epochs per training run")
     parser.add_argument("--subset", type=int, default=None, help="Subset size for quick tuning (overrides default CPU/GPU sizes)")
+    parser.add_argument("--no_oversample", action="store_false", dest="oversample", help="Disable random oversampling on train dataset")
+    parser.add_argument("--use_class_weights", action="store_true", help="Use weighted CrossEntropyLoss (only active if oversample is disabled)")
     
     args = parser.parse_args()
     
@@ -181,7 +189,9 @@ if __name__ == "__main__":
         data_dir=args.data_dir,
         output_path=args.output,
         epochs=args.epochs,
-        subset_size=args.subset
+        subset_size=args.subset,
+        oversample=args.oversample,
+        use_class_weights=args.use_class_weights
     )
 
 
