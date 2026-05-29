@@ -16,8 +16,11 @@ try:
 except ImportError:
     HAS_PYVI = False
 
+_WARNED_PYVI = False
+
 # Clean Vietnamese text function identical to the one in src.data_loader
 def clean_vietnamese_text(text, segment_words=False):
+    global _WARNED_PYVI
     text = str(text).lower()
     # Remove URLs
     text = re.sub(r'https?://\S+|www\.\S+', '', text)
@@ -36,7 +39,9 @@ def clean_vietnamese_text(text, segment_words=False):
         if HAS_PYVI:
             text = ViTokenizer.tokenize(text)
         else:
-            print("Warning: pyvi is not installed, skipping word segmentation.")
+            if not _WARNED_PYVI:
+                print("Warning: pyvi is not installed or failed to import. Skipping word segmentation.")
+                _WARNED_PYVI = True
             
     return text
 
