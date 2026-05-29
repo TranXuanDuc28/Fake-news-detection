@@ -116,6 +116,30 @@ TEST_CASES = [
     {
         "text": "Mẹ thiên nhiên trừng phạt: Trái Đất chuẩn bị bước vào 3 ngày tối tăm liên tục do hiện tượng thiên văn kỳ lạ, mọi người cần tích trữ lương thực ngay!",
         "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Thủ tướng Chính phủ yêu cầu các bộ, ngành khẩn trương triển khai các biện pháp bình ổn thị trường vàng, không để xảy ra tình trạng đầu cơ, làm giá.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Cảnh báo: Bọn tội phạm đang dùng công nghệ AI giả giọng nói của người thân gọi điện xin tiền cứu cấp, chỉ cần nghe máy 10 giây là tài khoản bị tự động rút sạch.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Việt Nam chính thức đưa vào vận hành hệ thống đăng ký hộ tịch trực tuyến toàn quốc, giúp rút ngắn thời gian xử lý thủ tục hành chính cho người dân.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Chúc mừng bạn đã trúng một chiếc điện thoại iPhone 15 Pro Max từ chương trình tri ân của tập đoàn công nghệ Vingroup. Vui lòng bấm vào liên kết vin-tri-an.net để cung cấp thông tin nhận giải!",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Kỳ thi tốt nghiệp THPT năm nay sẽ được tổ chức trong hai ngày với bốn bài thi độc lập, đảm bảo quy chế phòng thi nghiêm ngặt trên cả nước.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Bí quyết trường thọ cực kỳ đơn giản: Chỉ cần ăn một quả chuối chín đắp lá lốt nướng vào mỗi buổi tối sẽ tiêu diệt hoàn toàn độc tố tích tụ trong gan cả đời.",
+        "label": "TIN GIẢ (FAKE)"
     }
 ]
 
