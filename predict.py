@@ -141,7 +141,8 @@ def main():
         # Transformer Prediction
         if trans_model is not None:
             try:
-                inputs = trans_tokenizer(text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
+                cleaned_text = clean_vietnamese_text(text)
+                inputs = trans_tokenizer(cleaned_text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
                 input_ids = inputs["input_ids"].to(device)
                 attention_mask = inputs["attention_mask"].to(device)
                 with torch.no_grad():

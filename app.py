@@ -7,6 +7,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from transformers import AutoTokenizer
+import re
+
+# Clean Vietnamese text function identical to the one in src.data_loader
+def clean_vietnamese_text(text):
+    text = str(text).lower()
+    # Remove URLs
+    text = re.sub(r'https?://\S+|www\.\S+', '', text)
+    # Remove HTML tags
+    text = re.sub(r'<[^>]+>', '', text)
+    # Remove email addresses
+    text = re.sub(r'\S+@\S+', '', text)
+    # Remove social media mentions/usernames
+    text = re.sub(r'@\w+', '', text)
+    # Keep only alphanumeric (including Vietnamese characters), spaces, and basic punctuation
+    text = re.sub(r'[^\w\s,\.\?\!\-\:\#]', '', text)
+    # Standardize spaces
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 # Set page configuration
 st.set_page_config(
@@ -201,8 +219,8 @@ class VocabHelper:
         self.pad_idx = word2idx.get("<pad>", 0)
         
     def encode(self, text, max_len=128):
-        # Basic lowercase tokenization by whitespace and stripping punctuation
-        tokens = str(text).lower().replace(",", " ").replace(".", " ").replace("?", " ").replace("!", " ").split()
+        cleaned_text = clean_vietnamese_text(text)
+        tokens = cleaned_text.split()
         idxs = [self.word2idx.get(tok, self.unk_idx) for tok in tokens]
         if len(idxs) < max_len:
             idxs = idxs + [self.pad_idx] * (max_len - len(idxs))
@@ -318,7 +336,8 @@ with tab1:
                 # Transformer predict
                 if "transformer" in models:
                     model_t, tokenizer_t = models["transformer"]
-                    inputs = tokenizer_t(input_text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
+                    cleaned_text = clean_vietnamese_text(input_text)
+                    inputs = tokenizer_t(cleaned_text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
                     with torch.no_grad():
                         logits = model_t(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"])
                         probs = torch.softmax(logits, dim=1).squeeze(0)
