@@ -161,9 +161,10 @@ def load_raw_data(data_dir="data", segment_words=False):
 
 
 
-def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=128, subset_size=None, tokenizer_name="distilbert-base-multilingual-cased", oversample=False):
+def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=128, subset_size=None, tokenizer_name="distilbert-base-multilingual-cased", oversample=False, segment_words=None):
     """Creates PyTorch dataloaders for the specified model type with optional oversampling."""
-    segment_words = ("phobert" in tokenizer_name.lower())
+    if segment_words is None:
+        segment_words = ("phobert" in tokenizer_name.lower())
     train_df, val_df, test_df = load_raw_data(data_dir, segment_words=segment_words)
     
     # Optional sub-sampling for faster hyperparameter search

@@ -237,8 +237,8 @@ class VocabHelper:
         self.unk_idx = word2idx.get("<unk>", 1)
         self.pad_idx = word2idx.get("<pad>", 0)
         
-    def encode(self, text, max_len=128):
-        cleaned_text = clean_vietnamese_text(text)
+    def encode(self, text, max_len=128, segment_words=False):
+        cleaned_text = clean_vietnamese_text(text, segment_words=segment_words)
         tokens = cleaned_text.split()
         idxs = [self.word2idx.get(tok, self.unk_idx) for tok in tokens]
         if len(idxs) < max_len:
@@ -258,6 +258,8 @@ def load_pytorch_models(lstm_p, trans_p):
             vocab_w2i = checkpoint["vocab_word2idx"]
             vocab = VocabHelper(vocab_w2i)
             
+            lstm_segment = checkpoint.get("hyperparameters", {}).get("segment_words", False)
+            
             # Import BiLSTM here to avoid import problems
             from src.lstm_model import BiLSTMClassifier
             lstm_model = BiLSTMClassifier(
@@ -268,7 +270,7 @@ def load_pytorch_models(lstm_p, trans_p):
             )
             lstm_model.load_state_dict(checkpoint["model_state_dict"])
             lstm_model.eval()
-            models["lstm"] = (lstm_model, vocab)
+            models["lstm"] = (lstm_model, vocab, lstm_segment)
     except Exception as e:
         st.error(f"Lỗi tải mô hình LSTM: {e}")
         
@@ -284,6 +286,10 @@ def load_pytorch_models(lstm_p, trans_p):
                 
             tokenizer = AutoTokenizer.from_pretrained(trans_model_name)
             
+            trans_segment = checkpoint.get("hyperparameters", {}).get("segment_words", None)
+            if trans_segment is None:
+                trans_segment = ("phobert" in trans_model_name.lower())
+                
             from src.transformer_model import TransformerClassifier
             trans_model = TransformerClassifier(
                 model_name=trans_model_name,
@@ -292,7 +298,7 @@ def load_pytorch_models(lstm_p, trans_p):
             )
             trans_model.load_state_dict(checkpoint["model_state_dict"])
             trans_model.eval()
-            models["transformer"] = (trans_model, tokenizer)
+            models["transformer"] = (trans_model, tokenizer, trans_segment)
             models["transformer_name"] = trans_model_name
     except Exception as e:
         st.error(f"Lỗi tải mô hình Transformer: {e}")
@@ -350,8 +356,8 @@ with tab1:
                 
                 # LSTM predict
                 if "lstm" in models:
-                    model_l, vocab_l = models["lstm"]
-                    inputs = vocab_l.encode(input_text, max_len=128)
+                    model_l, vocab_l, lstm_seg = models["lstm"]
+                    inputs = vocab_l.encode(input_text, max_len=128, segment_words=lstm_seg)
                     with torch.no_grad():
                         logits = model_l(inputs)
                         probs = torch.softmax(logits, dim=1).squeeze(0)
@@ -361,10 +367,8 @@ with tab1:
                     
                 # Transformer predict
                 if "transformer" in models:
-                    model_t, tokenizer_t = models["transformer"]
-                    trans_name = models.get("transformer_name", "distilbert-base-multilingual-cased")
-                    segment_words = ("phobert" in trans_name.lower())
-                    cleaned_text = clean_vietnamese_text(input_text, segment_words=segment_words)
+                    model_t, tokenizer_t, trans_seg = models["transformer"]
+                    cleaned_text = clean_vietnamese_text(input_text, segment_words=trans_seg)
                     inputs = tokenizer_t(cleaned_text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
                     with torch.no_grad():
                         logits = model_t(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"])

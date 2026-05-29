@@ -105,16 +105,19 @@ def evaluate(model, dataloader, criterion, device, model_type, return_prediction
         return metrics, all_preds, all_targets
     return metrics
 
-def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5, resume=True, transformer_model_name="vinai/phobert-base"):
+def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5, resume=True, transformer_model_name="vinai/phobert-base", segment_words=None):
     os.makedirs(save_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\n--- Training {model_type.upper()} model on device: {device} ---")
-    print(f"Params: Epochs={epochs}, BatchSize={batch_size}, LR={lr}, Dropout={dropout}, Subset={subset_size}, Oversample={oversample}, UseClassWeights={use_class_weights}, Patience={patience}")
+    
+    # Resolve segment_words actual value for printing
+    resolved_segment_words = segment_words if segment_words is not None else ("phobert" in transformer_model_name.lower() if model_type == "transformer" else False)
+    print(f"Params: Epochs={epochs}, BatchSize={batch_size}, LR={lr}, Dropout={dropout}, Subset={subset_size}, Oversample={oversample}, UseClassWeights={use_class_weights}, Patience={patience}, SegmentWords={resolved_segment_words}")
     
     # Get DataLoaders
     if model_type == "lstm":
         train_loader, val_loader, test_loader, vocab = get_dataloaders(
-            data_dir=data_dir, model_type="lstm", batch_size=batch_size, subset_size=subset_size, oversample=oversample
+            data_dir=data_dir, model_type="lstm", batch_size=batch_size, subset_size=subset_size, oversample=oversample, segment_words=segment_words
         )
         model = BiLSTMClassifier(
             vocab_size=vocab.vocab_size,
@@ -124,7 +127,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
         )
     else: # transformer
         train_loader, val_loader, test_loader, tokenizer = get_dataloaders(
-            data_dir=data_dir, model_type="transformer", batch_size=batch_size, subset_size=subset_size, oversample=oversample, tokenizer_name=transformer_model_name
+            data_dir=data_dir, model_type="transformer", batch_size=batch_size, subset_size=subset_size, oversample=oversample, tokenizer_name=transformer_model_name, segment_words=segment_words
         )
         model = TransformerClassifier(
             model_name=transformer_model_name,
@@ -213,6 +216,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
                     "lr": new_lr,
                     "dropout": dropout,
                     "batch_size": batch_size,
+                    "segment_words": resolved_segment_words,
                     "freeze_backbone": freeze_backbone if model_type == "transformer" else None,
                     "transformer_model_name": transformer_model_name if model_type == "transformer" else None
                 }
@@ -294,6 +298,8 @@ if __name__ == "__main__":
     parser.add_argument("--history_file", type=str, default=None, help="Optional path to save final training history JSON")
     parser.add_argument("--patience", type=int, default=5, help="Patience epochs for early stopping")
     parser.add_argument("--no_resume", action="store_false", dest="resume", help="Disable automatically resuming from latest checkpoint")
+    parser.add_argument("--segment_words", action="store_true", default=None, help="Force Vietnamese word segmentation (using pyvi)")
+    parser.add_argument("--no_segment_words", action="store_false", dest="segment_words", help="Disable Vietnamese word segmentation")
     
     parser.add_argument("--transformer_model_name", type=str, default="vinai/phobert-base", help="Pre-trained transformer model name (e.g. vinai/phobert-base, distilbert-base-multilingual-cased)")
     
@@ -314,7 +320,8 @@ if __name__ == "__main__":
         use_class_weights=args.use_class_weights,
         patience=args.patience,
         resume=args.resume,
-        transformer_model_name=args.transformer_model_name
+        transformer_model_name=args.transformer_model_name,
+        segment_words=args.segment_words
     )
     
     if args.history_file:

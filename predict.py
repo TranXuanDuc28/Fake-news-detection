@@ -47,8 +47,8 @@ class VocabHelper:
         self.unk_idx = word2idx.get("<unk>", 1)
         self.pad_idx = word2idx.get("<pad>", 0)
         
-    def encode(self, text, max_len=128):
-        cleaned_text = clean_vietnamese_text(text)
+    def encode(self, text, max_len=128, segment_words=False):
+        cleaned_text = clean_vietnamese_text(text, segment_words=segment_words)
         tokens = cleaned_text.split()
         idxs = [self.word2idx.get(tok, self.unk_idx) for tok in tokens]
         if len(idxs) < max_len:
@@ -80,12 +80,15 @@ def main():
     # 2. Load LSTM Model
     lstm_model = None
     lstm_vocab = None
+    lstm_segment_words = False
     if os.path.exists(args.lstm_path):
         try:
             print(f"Đang tải mô hình BiLSTM từ {args.lstm_path}...")
             checkpoint = torch.load(args.lstm_path, map_location=device)
             vocab_w2i = checkpoint["vocab_word2idx"]
             lstm_vocab = VocabHelper(vocab_w2i)
+            
+            lstm_segment_words = checkpoint.get("hyperparameters", {}).get("segment_words", False)
             
             from src.lstm_model import BiLSTMClassifier
             lstm_model = BiLSTMClassifier(
@@ -97,7 +100,7 @@ def main():
             lstm_model.load_state_dict(checkpoint["model_state_dict"])
             lstm_model.to(device)
             lstm_model.eval()
-            print(f"{GREEN}✓ Tải mô hình BiLSTM thành công!{RESET}")
+            print(f"{GREEN}✓ Tải mô hình BiLSTM thành công! (Tách từ: {lstm_segment_words}){RESET}")
         except Exception as e:
             print(f"{RED}✗ Lỗi tải mô hình BiLSTM: {e}{RESET}")
     else:
@@ -106,6 +109,7 @@ def main():
     # 3. Load Transformer Model
     trans_model = None
     trans_tokenizer = None
+    trans_segment_words = False
     if os.path.exists(args.trans_path):
         try:
             print(f"Đang tải mô hình Transformer từ {args.trans_path}...")
@@ -120,6 +124,10 @@ def main():
             print(f"Đang sử dụng mô hình backbone: {trans_model_name}")
             trans_tokenizer = AutoTokenizer.from_pretrained(trans_model_name)
             
+            trans_segment_words = checkpoint.get("hyperparameters", {}).get("segment_words", None)
+            if trans_segment_words is None:
+                trans_segment_words = ("phobert" in trans_model_name.lower())
+                
             from src.transformer_model import TransformerClassifier
             trans_model = TransformerClassifier(
                 model_name=trans_model_name,
@@ -129,7 +137,7 @@ def main():
             trans_model.load_state_dict(checkpoint["model_state_dict"])
             trans_model.to(device)
             trans_model.eval()
-            print(f"{GREEN}✓ Tải mô hình Transformer thành công!{RESET}")
+            print(f"{GREEN}✓ Tải mô hình Transformer thành công! (Tách từ: {trans_segment_words}){RESET}")
         except Exception as e:
             print(f"{RED}✗ Lỗi tải mô hình Transformer: {e}{RESET}")
     else:
@@ -151,7 +159,7 @@ def main():
         # LSTM Prediction
         if lstm_model is not None:
             try:
-                inputs = lstm_vocab.encode(text, max_len=128).to(device)
+                inputs = lstm_vocab.encode(text, max_len=128, segment_words=lstm_segment_words).to(device)
                 with torch.no_grad():
                     logits = lstm_model(inputs)
                     probs = torch.softmax(logits, dim=1).squeeze(0)
@@ -167,8 +175,7 @@ def main():
         # Transformer Prediction
         if trans_model is not None:
             try:
-                segment_words = ("phobert" in trans_model_name.lower())
-                cleaned_text = clean_vietnamese_text(text, segment_words=segment_words)
+                cleaned_text = clean_vietnamese_text(text, segment_words=trans_segment_words)
                 inputs = trans_tokenizer(cleaned_text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
                 input_ids = inputs["input_ids"].to(device)
                 attention_mask = inputs["attention_mask"].to(device)
