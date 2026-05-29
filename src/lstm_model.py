@@ -34,6 +34,7 @@ class BiLSTMClassifier(nn.Module):
     def forward(self, x):
         # x shape: (batch_size, seq_len)
         embedded = self.embedding(x)  # shape: (batch_size, seq_len, embedding_dim)
+        embedded = self.dropout(embedded)  # Apply dropout on embeddings to prevent memorizing specific words
         
         # LSTM output
         # out shape: (batch_size, seq_len, hidden_dim * 2)

@@ -165,7 +165,9 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
     else:
         criterion = nn.CrossEntropyLoss()
         
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    # Add weight decay (L2 regularization) for LSTM to reduce overfitting
+    wd = 1e-4 if model_type == "lstm" else 0.0
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
     # Define learning rate scheduler (halves learning rate if validation F1 does not improve for 2 epochs)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=2)
     
