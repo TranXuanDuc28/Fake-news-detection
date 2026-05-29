@@ -5,7 +5,13 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer
 
-def clean_vietnamese_text(text):
+try:
+    from pyvi import ViTokenizer
+    HAS_PYVI = True
+except ImportError:
+    HAS_PYVI = False
+
+def clean_vietnamese_text(text, segment_words=False):
     """Cleans Vietnamese text by removing URLs, HTML tags, emails, social mentions, and weird symbols."""
     text = str(text).lower()
     # Remove URLs
@@ -20,7 +26,15 @@ def clean_vietnamese_text(text):
     text = re.sub(r'[^\w\s,\.\?\!\-\:\#]', '', text)
     # Standardize spaces
     text = re.sub(r'\s+', ' ', text).strip()
+    
+    if segment_words:
+        if HAS_PYVI:
+            text = ViTokenizer.tokenize(text)
+        else:
+            print("Warning: pyvi is not installed, skipping word segmentation.")
+            
     return text
+
 
 class Vocab:
     """Simple vocabulary builder for the LSTM model."""
@@ -107,7 +121,7 @@ class TransformerDataset(Dataset):
         return item
 
 
-def load_raw_data(data_dir="data"):
+def load_raw_data(data_dir="data", segment_words=False):
     """Loads train, val, and test dataframes, handles missing values, checks for additional datasets, and applies text cleaning."""
     train_df = pd.read_csv(os.path.join(data_dir, "train.csv"))
     val_df = pd.read_csv(os.path.join(data_dir, "val.csv"))
@@ -134,9 +148,9 @@ def load_raw_data(data_dir="data"):
     test_df["post_message"] = test_df["post_message"].fillna("")
     
     # Apply text cleaning
-    train_df["post_message"] = train_df["post_message"].apply(clean_vietnamese_text)
-    val_df["post_message"] = val_df["post_message"].apply(clean_vietnamese_text)
-    test_df["post_message"] = test_df["post_message"].apply(clean_vietnamese_text)
+    train_df["post_message"] = train_df["post_message"].apply(lambda x: clean_vietnamese_text(x, segment_words=segment_words))
+    val_df["post_message"] = val_df["post_message"].apply(lambda x: clean_vietnamese_text(x, segment_words=segment_words))
+    test_df["post_message"] = test_df["post_message"].apply(lambda x: clean_vietnamese_text(x, segment_words=segment_words))
     
     return train_df, val_df, test_df
 
@@ -144,7 +158,8 @@ def load_raw_data(data_dir="data"):
 
 def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=128, subset_size=None, tokenizer_name="distilbert-base-multilingual-cased", oversample=False):
     """Creates PyTorch dataloaders for the specified model type with optional oversampling."""
-    train_df, val_df, test_df = load_raw_data(data_dir)
+    segment_words = ("phobert" in tokenizer_name.lower())
+    train_df, val_df, test_df = load_raw_data(data_dir, segment_words=segment_words)
     
     # Optional sub-sampling for faster hyperparameter search
     if subset_size is not None:

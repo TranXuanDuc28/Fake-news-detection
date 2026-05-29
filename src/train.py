@@ -105,7 +105,7 @@ def evaluate(model, dataloader, criterion, device, model_type, return_prediction
         return metrics, all_preds, all_targets
     return metrics
 
-def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5, resume=True):
+def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5, resume=True, transformer_model_name="vinai/phobert-base"):
     os.makedirs(save_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\n--- Training {model_type.upper()} model on device: {device} ---")
@@ -124,10 +124,10 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
         )
     else: # transformer
         train_loader, val_loader, test_loader, tokenizer = get_dataloaders(
-            data_dir=data_dir, model_type="transformer", batch_size=batch_size, subset_size=subset_size, oversample=oversample
+            data_dir=data_dir, model_type="transformer", batch_size=batch_size, subset_size=subset_size, oversample=oversample, tokenizer_name=transformer_model_name
         )
         model = TransformerClassifier(
-            model_name="distilbert-base-multilingual-cased",
+            model_name=transformer_model_name,
             dropout=dropout,
             freeze_backbone=freeze_backbone
         )
@@ -213,7 +213,8 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
                     "lr": new_lr,
                     "dropout": dropout,
                     "batch_size": batch_size,
-                    "freeze_backbone": freeze_backbone if model_type == "transformer" else None
+                    "freeze_backbone": freeze_backbone if model_type == "transformer" else None,
+                    "transformer_model_name": transformer_model_name if model_type == "transformer" else None
                 }
             }
             # For LSTM we must save vocab so we can encode words for inference
@@ -294,6 +295,8 @@ if __name__ == "__main__":
     parser.add_argument("--patience", type=int, default=5, help="Patience epochs for early stopping")
     parser.add_argument("--no_resume", action="store_false", dest="resume", help="Disable automatically resuming from latest checkpoint")
     
+    parser.add_argument("--transformer_model_name", type=str, default="vinai/phobert-base", help="Pre-trained transformer model name (e.g. vinai/phobert-base, distilbert-base-multilingual-cased)")
+    
     args = parser.parse_args()
     
     # Run training
@@ -310,7 +313,8 @@ if __name__ == "__main__":
         oversample=args.oversample,
         use_class_weights=args.use_class_weights,
         patience=args.patience,
-        resume=args.resume
+        resume=args.resume,
+        transformer_model_name=args.transformer_model_name
     )
     
     if args.history_file:

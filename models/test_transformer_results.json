@@ -1,0 +1,8 @@
+{
+    "loss": 0.1151,
+    "accuracy": 0.9650,
+    "precision_binary": 0.9012,
+    "recall_binary": 0.8902,
+    "f1_binary": 0.8957,
+    "f1_macro": 0.9373
+}

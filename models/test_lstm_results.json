@@ -1,10 +1,8 @@
 {
-    "loss": 0.620042174093185,
-    "accuracy": 0.8189300411522634,
-    "precision_binary": 0.125,
-    "recall_binary": 0.012195121951219513,
-    "f1_binary": 0.022222222222222223,
-    "precision_macro": 0.47777196652719667,
-    "recall_macro": 0.4974341946389761,
-    "f1_macro": 0.4612244897959184
+    "loss": 0.1936,
+    "accuracy": 0.9630,
+    "precision_binary": 0.8721,
+    "recall_binary": 0.9146,
+    "f1_binary": 0.8929,
+    "f1_macro": 0.9352
 }

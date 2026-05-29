@@ -10,7 +10,14 @@ from transformers import AutoTokenizer
 import re
 
 # Clean Vietnamese text function identical to the one in src.data_loader
-def clean_vietnamese_text(text):
+try:
+    from pyvi import ViTokenizer
+    HAS_PYVI = True
+except ImportError:
+    HAS_PYVI = False
+
+# Clean Vietnamese text function identical to the one in src.data_loader
+def clean_vietnamese_text(text, segment_words=False):
     text = str(text).lower()
     # Remove URLs
     text = re.sub(r'https?://\S+|www\.\S+', '', text)
@@ -24,6 +31,13 @@ def clean_vietnamese_text(text):
     text = re.sub(r'[^\w\s,\.\?\!\-\:\#]', '', text)
     # Standardize spaces
     text = re.sub(r'\s+', ' ', text).strip()
+    
+    if segment_words:
+        if HAS_PYVI:
+            text = ViTokenizer.tokenize(text)
+        else:
+            print("Warning: pyvi is not installed, skipping word segmentation.")
+            
     return text
 
 # Set page configuration
@@ -257,17 +271,24 @@ def load_pytorch_models(lstm_p, trans_p):
     try:
         if trans_p and os.path.exists(trans_p):
             checkpoint = torch.load(trans_p, map_location=torch.device('cpu'))
-            tokenizer = AutoTokenizer.from_pretrained("distilbert-base-multilingual-cased")
+            
+            # Dynamic model name from checkpoint hyperparameters, fallback to distilbert if missing
+            trans_model_name = checkpoint.get("hyperparameters", {}).get("transformer_model_name", None)
+            if not trans_model_name:
+                trans_model_name = "distilbert-base-multilingual-cased"
+                
+            tokenizer = AutoTokenizer.from_pretrained(trans_model_name)
             
             from src.transformer_model import TransformerClassifier
             trans_model = TransformerClassifier(
-                model_name="distilbert-base-multilingual-cased",
+                model_name=trans_model_name,
                 dropout=checkpoint["hyperparameters"]["dropout"],
                 freeze_backbone=True
             )
             trans_model.load_state_dict(checkpoint["model_state_dict"])
             trans_model.eval()
             models["transformer"] = (trans_model, tokenizer)
+            models["transformer_name"] = trans_model_name
     except Exception as e:
         st.error(f"Lỗi tải mô hình Transformer: {e}")
         
@@ -275,7 +296,7 @@ def load_pytorch_models(lstm_p, trans_p):
 
 # ----------------- MAIN LAYOUT -----------------
 st.markdown("<h1 class='main-title'>🚨 HỆ THỐNG PHÁT HIỆN TIN GIẢ TIẾNG VIỆT</h1>", unsafe_allow_html=True)
-st.markdown("<p class='subtitle'>Báo cáo Đồ án Học Sâu - So sánh kỹ thuật BiLSTM và Transformer (DistilBERT)</p>", unsafe_allow_html=True)
+st.markdown("<p class='subtitle'>Báo cáo Đồ án Học Sâu - So sánh kỹ thuật BiLSTM và Transformer</p>", unsafe_allow_html=True)
 
 tab1, tab2, tab3 = st.tabs(["🔍 Phân tích Tin tức (Demo)", "📊 So sánh Hiệu năng", "⚙️ Kết quả Tuning"])
 
@@ -336,7 +357,9 @@ with tab1:
                 # Transformer predict
                 if "transformer" in models:
                     model_t, tokenizer_t = models["transformer"]
-                    cleaned_text = clean_vietnamese_text(input_text)
+                    trans_name = models.get("transformer_name", "distilbert-base-multilingual-cased")
+                    segment_words = ("phobert" in trans_name.lower())
+                    cleaned_text = clean_vietnamese_text(input_text, segment_words=segment_words)
                     inputs = tokenizer_t(cleaned_text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
                     with torch.no_grad():
                         logits = model_t(input_ids=inputs["input_ids"], attention_mask=inputs["attention_mask"])
@@ -346,7 +369,10 @@ with tab1:
                     prob_fake_trans = 0.5
             
             # Visual display
-            st.markdown("#### Mô hình Transformer (DistilBERT)")
+            trans_label = "Transformer"
+            if mode != "Chế độ Heuristic (Từ khóa)" and "models" in locals() and "transformer_name" in models:
+                trans_label = f"Transformer ({models['transformer_name'].split('/')[-1]})"
+            st.markdown(f"#### Mô hình {trans_label}")
             if prob_fake_trans >= 0.5:
                 st.markdown("<span class='badge badge-fake'>Fake News (Tin Giả)</span>", unsafe_allow_html=True)
                 st.write(f"Độ tin cậy tin giả: **{prob_fake_trans * 100:.2f}%**")
@@ -443,7 +469,7 @@ with tab2:
             f"{lstm_metrics['f1_binary']*100:.2f}%",
             f"{lstm_metrics['f1_macro']*100:.2f}%" if "f1_macro" in lstm_metrics else "N/A"
         ],
-        "Mô hình Transformer (DistilBERT)": [
+        "Mô hình Transformer": [
             f"{trans_metrics['accuracy']*100:.2f}%",
             f"{trans_metrics['precision_binary']*100:.2f}%",
             f"{trans_metrics['recall_binary']*100:.2f}%",

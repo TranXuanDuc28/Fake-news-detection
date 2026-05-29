@@ -1,12 +1,23 @@
 import os
 import sys
+
+# Set system output to UTF-8 to prevent encoding errors on Windows terminal
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
 import argparse
 import re
 import torch
 from transformers import AutoTokenizer
 
+try:
+    from pyvi import ViTokenizer
+    HAS_PYVI = True
+except ImportError:
+    HAS_PYVI = False
+
 # Clean Vietnamese text function identical to the one in src.data_loader
-def clean_vietnamese_text(text):
+def clean_vietnamese_text(text, segment_words=False):
     text = str(text).lower()
     # Remove URLs
     text = re.sub(r'https?://\S+|www\.\S+', '', text)
@@ -20,6 +31,13 @@ def clean_vietnamese_text(text):
     text = re.sub(r'[^\w\s,\.\?\!\-\:\#]', '', text)
     # Standardize spaces
     text = re.sub(r'\s+', ' ', text).strip()
+    
+    if segment_words:
+        if HAS_PYVI:
+            text = ViTokenizer.tokenize(text)
+        else:
+            print("Warning: pyvi is not installed, skipping word segmentation.")
+            
     return text
 
 # Vocab helper to encode texts for the LSTM model
@@ -92,11 +110,19 @@ def main():
         try:
             print(f"Đang tải mô hình Transformer từ {args.trans_path}...")
             checkpoint = torch.load(args.trans_path, map_location=device)
-            trans_tokenizer = AutoTokenizer.from_pretrained("distilbert-base-multilingual-cased")
+            
+            # Dynamic model name from checkpoint hyperparameters, fallback to distilbert if missing
+            global trans_model_name
+            trans_model_name = checkpoint.get("hyperparameters", {}).get("transformer_model_name", None)
+            if not trans_model_name:
+                trans_model_name = "distilbert-base-multilingual-cased"
+                
+            print(f"Đang sử dụng mô hình backbone: {trans_model_name}")
+            trans_tokenizer = AutoTokenizer.from_pretrained(trans_model_name)
             
             from src.transformer_model import TransformerClassifier
             trans_model = TransformerClassifier(
-                model_name="distilbert-base-multilingual-cased",
+                model_name=trans_model_name,
                 dropout=checkpoint["hyperparameters"].get("dropout", 0.3),
                 freeze_backbone=True
             )
@@ -141,7 +167,8 @@ def main():
         # Transformer Prediction
         if trans_model is not None:
             try:
-                cleaned_text = clean_vietnamese_text(text)
+                segment_words = ("phobert" in trans_model_name.lower())
+                cleaned_text = clean_vietnamese_text(text, segment_words=segment_words)
                 inputs = trans_tokenizer(cleaned_text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
                 input_ids = inputs["input_ids"].to(device)
                 attention_mask = inputs["attention_mask"].to(device)
