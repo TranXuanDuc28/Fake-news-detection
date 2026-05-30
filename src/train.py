@@ -446,7 +446,7 @@ if __name__ == "__main__":
     parser.add_argument("--embedding_dim", type=int, default=64, help="Embedding dimension for LSTM model")
     parser.add_argument("--hidden_dim", type=int, default=64, help="Hidden dimension for LSTM model")
     parser.add_argument("--use_pretrained_emb", action="store_true", help="Use pre-trained PhoW2V word embeddings for LSTM")
-    parser.add_argument("--additional_dataset", type=str, default="none", choices=["none", "vfnd", "crawled", "both", "legacy"], help="Additional dataset to merge into train/val/test splits")
+    parser.add_argument("--additional_dataset", type=str, default="none", choices=["none", "vfnd", "crawled", "tingia", "both", "all", "legacy"], help="Additional dataset to merge into train/val/test splits")
     parser.add_argument("--no_additional", action="store_true", help="Shortcut to disable additional dataset (equivalent to --additional_dataset none)")
     
     args = parser.parse_args()
