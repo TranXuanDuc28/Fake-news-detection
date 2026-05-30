@@ -217,6 +217,57 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
                     os.remove(zip_path)
             except Exception as e:
                 print(f"--> Error extracting zip file: {e}")
+                
+        # 2.5 Verify if file exists and is valid size, otherwise try kagglehub fallback
+        file_valid = False
+        if os.path.exists(txt_path):
+            if os.path.getsize(txt_path) > 10000000: # > 10 MB (should be ~1.18 GB)
+                file_valid = True
+            else:
+                print("--> WARNING: Downloaded file is too small (possibly HTML/pointer page). Removing it.")
+                try: os.remove(txt_path)
+                except: pass
+                
+        if not file_valid:
+            print("--> Trying fallback download via kagglehub...")
+            try:
+                import kagglehub
+                import shutil
+                # Determine correct dataset path based on syllable or word
+                dataset_name = "thnhphong/word2vec-vi-syllables-100dims"
+                if segment_words:
+                    dataset_name = "thnhphong/word2vec-vi-words-100dims"
+                
+                print(f"--> Downloading from Kaggle via kagglehub: {dataset_name} ...")
+                download_dir = kagglehub.dataset_download(dataset_name)
+                print(f"--> kagglehub download completed at: {download_dir}")
+                
+                # Find any .txt file in the download directory
+                txt_files = [f for f in os.listdir(download_dir) if f.endswith(".txt")]
+                if txt_files:
+                    src_txt_path = os.path.join(download_dir, txt_files[0])
+                    shutil.copy(src_txt_path, txt_path)
+                    print(f"--> Copied {txt_files[0]} to {txt_path}")
+                else:
+                    # Maybe it is zipped?
+                    zip_files = [f for f in os.listdir(download_dir) if f.endswith(".zip")]
+                    if zip_files:
+                        src_zip_path = os.path.join(download_dir, zip_files[0])
+                        with zipfile.ZipFile(src_zip_path, 'r') as zip_ref:
+                            txt_files_zip = [f for f in zip_ref.namelist() if f.endswith('.txt')]
+                            if txt_files_zip:
+                                target_file = txt_files_zip[0]
+                                zip_ref.extract(target_file, data_dir)
+                                extracted_path = os.path.join(data_dir, target_file)
+                                if extracted_path != txt_path:
+                                    if os.path.exists(txt_path):
+                                        os.remove(txt_path)
+                                    os.rename(extracted_path, txt_path)
+                            else:
+                                zip_ref.extractall(data_dir)
+                        print(f"--> Extracted zip file from kagglehub!")
+            except Exception as kaggle_err:
+                print(f"--> Kagglehub download failed: {kaggle_err}")
                 return None
 
     # 3. Read txt file and load vectors
