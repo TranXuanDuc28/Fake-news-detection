@@ -154,6 +154,9 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
                     out_file.write(response.read())
                 print("--> Download completed successfully!")
             except Exception as e:
+                if os.path.exists(zip_path):
+                    try: os.remove(zip_path)
+                    except: pass
                 print(f"--> Urllib download failed: {e}. Trying fallback with wget/curl...")
                 try:
                     import subprocess
@@ -161,12 +164,18 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
                     subprocess.run(["wget", "-q", "-O", zip_path, url], check=True)
                     print("--> Download completed via wget!")
                 except Exception as wget_err:
+                    if os.path.exists(zip_path):
+                        try: os.remove(zip_path)
+                        except: pass
                     print(f"--> Wget failed: {wget_err}. Attempting download via curl...")
                     try:
                         import subprocess
                         subprocess.run(["curl", "-s", "-L", "-o", zip_path, url], check=True)
                         print("--> Download completed via curl!")
                     except Exception as curl_err:
+                        if os.path.exists(zip_path):
+                            try: os.remove(zip_path)
+                            except: pass
                         print(f"--> Primary URL failed. Trying mirror on Hugging Face...")
                         if not segment_words:
                             hf_mirror_url = "https://huggingface.co/ducdatit2002/vietnamese-emotion-text-classification/resolve/main/word2vec_vi_syllables_100dims.txt"
