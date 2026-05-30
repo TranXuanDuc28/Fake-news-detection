@@ -119,85 +119,129 @@ def evaluate(model, dataloader, criterion, device, model_type, return_prediction
         return metrics, all_preds, all_targets
     return metrics
 
-def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
+def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data", embedding_dim=100):
     """
-    Downloads and loads the PhoW2V Vietnamese pre-trained embeddings (100 dimensions).
+    Downloads and loads the pre-trained embeddings (100-dim PhoW2V or 300-dim FastText).
     Maps the vocabulary of our dataset to the pre-trained vectors.
     """
     import urllib.request
     import zipfile
     
-    # 1. Choose syllable or word level
-    if segment_words:
-        url = "https://public.vinai.io/word2vec_vi_words_100dims.zip"
-        zip_name = "word2vec_vi_words_100dims.zip"
-        txt_name = "word2vec_vi_words_100dims.txt"
+    # 1. Choose embedding type based on dimension
+    if embedding_dim == 300:
+        url = "https://dl.fbaipublicfiles.com/fasttext/vectors-wiki/wiki.vi.vec"
+        zip_name = ""
+        txt_name = "wiki.vi.vec"
     else:
-        url = "https://public.vinai.io/word2vec_vi_syllables_100dims.zip"
-        zip_name = "word2vec_vi_syllables_100dims.zip"
-        txt_name = "word2vec_vi_syllables_100dims.txt"
+        embedding_dim = 100 # Ensure it is 100 for PhoW2V
+        if segment_words:
+            url = "https://public.vinai.io/word2vec_vi_words_100dims.zip"
+            zip_name = "word2vec_vi_words_100dims.zip"
+            txt_name = "word2vec_vi_words_100dims.txt"
+        else:
+            url = "https://public.vinai.io/word2vec_vi_syllables_100dims.zip"
+            zip_name = "word2vec_vi_syllables_100dims.zip"
+            txt_name = "word2vec_vi_syllables_100dims.txt"
         
     os.makedirs(data_dir, exist_ok=True)
-    zip_path = os.path.join(data_dir, zip_name)
+    zip_path = os.path.join(data_dir, zip_name) if zip_name else ""
     txt_path = os.path.join(data_dir, txt_name)
     
-    # 2. Download zip file if not exists
+    # 2. Download file if not exists
     if not os.path.exists(txt_path):
-        if not os.path.exists(zip_path):
+        if zip_path:
+            # VinAI PhoW2V (Zipped)
+            if not os.path.exists(zip_path):
+                try:
+                    print(f"--> Downloading PhoW2V pre-trained embeddings from {url}...")
+                    req = urllib.request.Request(
+                        url, 
+                        headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                    )
+                    with urllib.request.urlopen(req) as response, open(zip_path, 'wb') as out_file:
+                        out_file.write(response.read())
+                    print("--> Download completed successfully!")
+                except Exception as e:
+                    if os.path.exists(zip_path):
+                        try: os.remove(zip_path)
+                        except: pass
+                    print(f"--> Urllib download failed: {e}. Trying fallback with wget/curl...")
+                    try:
+                        import subprocess
+                        print("--> Attempting download via wget...")
+                        subprocess.run(["wget", "-q", "-O", zip_path, url], check=True)
+                        print("--> Download completed via wget!")
+                    except Exception as wget_err:
+                        if os.path.exists(zip_path):
+                            try: os.remove(zip_path)
+                            except: pass
+                        print(f"--> Wget failed: {wget_err}. Attempting download via curl...")
+                        try:
+                            import subprocess
+                            subprocess.run(["curl", "-s", "-L", "-o", zip_path, url], check=True)
+                            print("--> Download completed via curl!")
+                        except Exception as curl_err:
+                            if os.path.exists(zip_path):
+                                try: os.remove(zip_path)
+                                except: pass
+                            print(f"--> Primary URL failed. Trying mirror on Hugging Face...")
+                            if not segment_words:
+                                hf_mirror_url = "https://huggingface.co/ducdatit2002/vietnamese-emotion-text-classification/resolve/main/word2vec_vi_syllables_100dims.txt?download=true"
+                                print(f"--> Downloading syllable mirror from Hugging Face: {hf_mirror_url} ...")
+                                try:
+                                    import subprocess
+                                    subprocess.run(["wget", "-q", "-O", txt_path, hf_mirror_url], check=True)
+                                    print("--> Mirror download completed via wget!")
+                                except Exception as hf_wget_err:
+                                    try:
+                                        import subprocess
+                                        subprocess.run(["curl", "-s", "-L", "-o", txt_path, hf_mirror_url], check=True)
+                                        print("--> Mirror download completed via curl!")
+                                    except Exception as hf_curl_err:
+                                        print(f"--> Mirror download failed: {hf_curl_err}")
+                                        return None
+                            else:
+                                print("--> No word-level mirror available. Fallback failed.")
+                                return None
+        else:
+            # Facebook FastText (Direct .vec download)
             try:
-                print(f"--> Downloading PhoW2V pre-trained embeddings from {url}...")
+                print(f"--> Downloading Facebook FastText pre-trained embeddings from {url}...")
                 req = urllib.request.Request(
                     url, 
                     headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
                 )
-                with urllib.request.urlopen(req) as response, open(zip_path, 'wb') as out_file:
+                with urllib.request.urlopen(req) as response, open(txt_path, 'wb') as out_file:
                     out_file.write(response.read())
                 print("--> Download completed successfully!")
             except Exception as e:
-                if os.path.exists(zip_path):
-                    try: os.remove(zip_path)
+                if os.path.exists(txt_path):
+                    try: os.remove(txt_path)
                     except: pass
                 print(f"--> Urllib download failed: {e}. Trying fallback with wget/curl...")
                 try:
                     import subprocess
                     print("--> Attempting download via wget...")
-                    subprocess.run(["wget", "-q", "-O", zip_path, url], check=True)
+                    subprocess.run(["wget", "-q", "-O", txt_path, url], check=True)
                     print("--> Download completed via wget!")
                 except Exception as wget_err:
-                    if os.path.exists(zip_path):
-                        try: os.remove(zip_path)
+                    if os.path.exists(txt_path):
+                        try: os.remove(txt_path)
                         except: pass
                     print(f"--> Wget failed: {wget_err}. Attempting download via curl...")
                     try:
                         import subprocess
-                        subprocess.run(["curl", "-s", "-L", "-o", zip_path, url], check=True)
+                        subprocess.run(["curl", "-s", "-L", "-o", txt_path, url], check=True)
                         print("--> Download completed via curl!")
                     except Exception as curl_err:
-                        if os.path.exists(zip_path):
-                            try: os.remove(zip_path)
+                        if os.path.exists(txt_path):
+                            try: os.remove(txt_path)
                             except: pass
-                        print(f"--> Primary URL failed. Trying mirror on Hugging Face...")
-                        if not segment_words:
-                            hf_mirror_url = "https://huggingface.co/ducdatit2002/vietnamese-emotion-text-classification/resolve/main/word2vec_vi_syllables_100dims.txt?download=true"
-                            print(f"--> Downloading syllable mirror from Hugging Face: {hf_mirror_url} ...")
-                            try:
-                                import subprocess
-                                subprocess.run(["wget", "-q", "-O", txt_path, hf_mirror_url], check=True)
-                                print("--> Mirror download completed via wget!")
-                            except Exception as hf_wget_err:
-                                try:
-                                    import subprocess
-                                    subprocess.run(["curl", "-s", "-L", "-o", txt_path, hf_mirror_url], check=True)
-                                    print("--> Mirror download completed via curl!")
-                                except Exception as hf_curl_err:
-                                    print(f"--> Mirror download failed: {hf_curl_err}")
-                                    return None
-                        else:
-                            print("--> No word-level mirror available. Fallback failed.")
-                            return None
+                        print(f"--> FastText download failed completely: {curl_err}")
+                        return None
         
         # Unzip if zip was downloaded
-        if os.path.exists(zip_path):
+        if zip_path and os.path.exists(zip_path):
             print(f"--> Extracting {zip_name}...")
             try:
                 with zipfile.ZipFile(zip_path, 'r') as zip_ref:
@@ -218,17 +262,17 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
             except Exception as e:
                 print(f"--> Error extracting zip file: {e}")
                 
-        # 2.5 Verify if file exists and is valid size, otherwise try kagglehub fallback
+        # 2.5 Verify if file exists and is valid size, otherwise try kagglehub fallback (only for PhoW2V)
         file_valid = False
         if os.path.exists(txt_path):
-            if os.path.getsize(txt_path) > 10000000: # > 10 MB (should be ~1.18 GB)
+            if os.path.getsize(txt_path) > 10000000: # > 10 MB (should be ~1.18 GB / ~600MB)
                 file_valid = True
             else:
                 print("--> WARNING: Downloaded file is too small (possibly HTML/pointer page). Removing it.")
                 try: os.remove(txt_path)
                 except: pass
                 
-        if not file_valid:
+        if not file_valid and embedding_dim == 100:
             print("--> Trying fallback download via kagglehub...")
             try:
                 import kagglehub
@@ -273,7 +317,6 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
     # 3. Read txt file and load vectors
     print(f"--> Loading pre-trained vectors from {txt_path}...")
     pretrained_dict = {}
-    embedding_dim = 100
     try:
         with open(txt_path, 'r', encoding='utf-8', errors='ignore') as f:
             for i, line in enumerate(f):
@@ -312,7 +355,7 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
             weight_matrix[idx] = np.array(vec)
             matched_count += 1
             
-    print(f"--> Vocab coverage: {matched_count}/{vocab_size} words ({matched_count/vocab_size:.2%}) initialized from pre-trained PhoW2V.")
+    print(f"--> Vocab coverage: {matched_count}/{vocab_size} words ({matched_count/vocab_size:.2%}) initialized from pre-trained embeddings.")
     return torch.tensor(weight_matrix, dtype=torch.float32)
 
 def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5, resume=True, transformer_model_name="vinai/phobert-base", segment_words=None, embedding_dim=64, hidden_dim=64, use_pretrained_emb=False, additional_dataset="none"):
@@ -320,9 +363,10 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\n--- Training {model_type.upper()} model on device: {device} ---")
     
-    # Enforce embedding_dim = 100 if use_pretrained_emb is active
+    # Enforce embedding_dim if use_pretrained_emb is active
     if model_type == "lstm" and use_pretrained_emb:
-        embedding_dim = 100
+        if embedding_dim not in [100, 300]:
+            embedding_dim = 100
         
     # Resolve segment_words actual value for printing
     resolved_segment_words = segment_words if segment_words is not None else ("phobert" in transformer_model_name.lower() if model_type == "transformer" else False)
@@ -336,7 +380,9 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
         
         pretrained_weights = None
         if use_pretrained_emb:
-            pretrained_weights = load_pretrained_embeddings(vocab.word2idx, segment_words=resolved_segment_words, data_dir=data_dir)
+            pretrained_weights = load_pretrained_embeddings(
+                vocab.word2idx, segment_words=resolved_segment_words, data_dir=data_dir, embedding_dim=embedding_dim
+            )
             if pretrained_weights is None:
                 print("--> WARNING: Failed to load pre-trained embeddings. Falling back to random initialization.")
                 use_pretrained_emb = False
