@@ -55,11 +55,25 @@ for model_name in ["lstm", "transformer"]:
         
         for param, metrics in sweep_data.items():
             final_metrics = metrics.get("final_metrics", {})
-            # Read macro F1
-            val_f1 = final_metrics.get("test_f1_macro", 0.0) * 100
-            if val_f1 == 0.0:
-                val_f1 = final_metrics.get("test_f1", 0.0) * 100
-            val_loss = final_metrics.get("test_loss", 0.0)
+            # Read macro F1 with multiple fallback mechanisms
+            val_f1 = final_metrics.get("test_f1_macro", None)
+            if val_f1 is None:
+                val_f1 = final_metrics.get("f1_macro", None)
+            if val_f1 is None:
+                val_f1 = final_metrics.get("f1_binary", None)
+            if val_f1 is None:
+                val_f1 = final_metrics.get("test_f1", 0.0)
+                
+            if val_f1 <= 1.0:
+                val_f1 = val_f1 * 100
+                
+            # Read loss with fallback to validation loss history
+            val_loss = final_metrics.get("test_loss", None)
+            if val_loss is None:
+                val_loss = final_metrics.get("loss", None)
+            if val_loss is None:
+                loss_hist = metrics.get("val_loss_history", [])
+                val_loss = loss_hist[-1] if loss_hist else 0.0
             
             print(f"  {param:<11} | {val_f1:>20.2f}% | {val_loss:>10.4f}")
             
