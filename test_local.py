@@ -323,18 +323,20 @@ def load_trans_model(model_path, device):
         print(f"{RED}Lỗi tải mô hình Transformer từ {model_path}: {e}{RESET}")
         return None, None, None, False
 
-def run_local_test():
+def run_local_test(lstm_path="models/best_lstm.pt", trans_path="models/best_transformer.pt", lstm_threshold=0.63, trans_threshold=0.50):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"{CYAN}{BOLD}=== HỆ THỐNG KIỂM THỬ MÔ HÌNH TIN GIẢ TRÊN LOCAL ==={RESET}")
     print(f"Thiết bị chạy: {BOLD}{device.type.upper()}{RESET}")
     print(f"Trạng thái PyVi (Word Segmentation): {BOLD}{'Đã cài đặt' if HAS_PYVI else 'Chưa cài đặt'}{RESET}\n")
 
-    # 1. Tìm các file trọng số khả dụng
-    lstm_paths = ["models/best_lstm.pt"]
-    trans_paths = ["models/best_transformer.pt", "models/best_transformer_phobert.pt", "models/best_transformer_distilbert.pt"]
-    
-    lstm_path = next((p for p in lstm_paths if os.path.exists(p)), None)
-    trans_path = next((p for p in trans_paths if os.path.exists(p)), None)
+    # If the user specified paths don't exist, search for fallbacks
+    if lstm_path and not os.path.exists(lstm_path):
+        fallback_paths = ["models/best_lstm.pt"]
+        lstm_path = next((p for p in fallback_paths if os.path.exists(p)), None)
+        
+    if trans_path and not os.path.exists(trans_path):
+        fallback_paths = ["models/best_transformer.pt", "models/best_transformer_phobert.pt", "models/best_transformer_distilbert.pt"]
+        trans_path = next((p for p in fallback_paths if os.path.exists(p)), None)
     
     # Load LSTM
     lstm_model, lstm_vocab, lstm_segment = None, None, False
@@ -382,9 +384,9 @@ def run_local_test():
                     prob_fake = probs[1].item()
                     prob_real = probs[0].item()
                 
-                pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= 0.5 else f"{GREEN}TIN THẬT (REAL){RESET}"
-                confidence = prob_fake if prob_fake >= 0.5 else prob_real
-                print(f"  └─ {BOLD}[BiLSTM]:{RESET}      {pred_label} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+                pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= lstm_threshold else f"{GREEN}TIN THẬT (REAL){RESET}"
+                confidence = prob_fake if prob_fake >= lstm_threshold else prob_real
+                print(f"  └─ {BOLD}[BiLSTM]:{RESET}      {pred_label} | Ngưỡng: {lstm_threshold:.2f} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
             except Exception as e:
                 print(f"  └─ [BiLSTM]: Lỗi dự đoán - {e}")
                 
@@ -401,9 +403,9 @@ def run_local_test():
                     prob_fake = probs[1].item()
                     prob_real = probs[0].item()
                 
-                pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= 0.5 else f"{GREEN}TIN THẬT (REAL){RESET}"
-                confidence = prob_fake if prob_fake >= 0.5 else prob_real
-                print(f"  └─ {BOLD}[Transformer]:{RESET} {pred_label} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+                pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= trans_threshold else f"{GREEN}TIN THẬT (REAL){RESET}"
+                confidence = prob_fake if prob_fake >= trans_threshold else prob_real
+                print(f"  └─ {BOLD}[Transformer]:{RESET} {pred_label} | Ngưỡng: {trans_threshold:.2f} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
             except Exception as e:
                 print(f"  └─ [Transformer]: Lỗi dự đoán - {e}")
                 
@@ -438,9 +440,9 @@ def run_local_test():
                         prob_fake = probs[1].item()
                         prob_real = probs[0].item()
                     
-                    pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= 0.5 else f"{GREEN}TIN THẬT (REAL){RESET}"
-                    confidence = prob_fake if prob_fake >= 0.5 else prob_real
-                    print(f"  └─ {BOLD}[BiLSTM]:{RESET}      {pred_label} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+                    pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= lstm_threshold else f"{GREEN}TIN THẬT (REAL){RESET}"
+                    confidence = prob_fake if prob_fake >= lstm_threshold else prob_real
+                    print(f"  └─ {BOLD}[BiLSTM]:{RESET}      {pred_label} | Ngưỡng: {lstm_threshold:.2f} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
                 except Exception as e:
                     print(f"  └─ [BiLSTM]: Lỗi dự đoán - {e}")
                     
@@ -457,9 +459,9 @@ def run_local_test():
                         prob_fake = probs[1].item()
                         prob_real = probs[0].item()
                     
-                    pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= 0.5 else f"{GREEN}TIN THẬT (REAL){RESET}"
-                    confidence = prob_fake if prob_fake >= 0.5 else prob_real
-                    print(f"  └─ {BOLD}[Transformer]:{RESET} {pred_label} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+                    pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= trans_threshold else f"{GREEN}TIN THẬT (REAL){RESET}"
+                    confidence = prob_fake if prob_fake >= trans_threshold else prob_real
+                    print(f"  └─ {BOLD}[Transformer]:{RESET} {pred_label} | Ngưỡng: {trans_threshold:.2f} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
                 except Exception as e:
                     print(f"  └─ [Transformer]: Lỗi dự đoán - {e}")
                     
@@ -469,4 +471,17 @@ def run_local_test():
             break
 
 if __name__ == "__main__":
-    run_local_test()
+    import argparse
+    parser = argparse.ArgumentParser(description="Run local benchmarks on model weights.")
+    parser.add_argument("--lstm_path", type=str, default="models/best_lstm.pt", help="Path to best_lstm.pt")
+    parser.add_argument("--trans_path", type=str, default="models/best_transformer.pt", help="Path to best_transformer.pt")
+    parser.add_argument("--lstm_threshold", type=float, default=0.63, help="Decision threshold for LSTM (default 0.63)")
+    parser.add_argument("--trans_threshold", type=float, default=0.50, help="Decision threshold for Transformer (default 0.50)")
+    args = parser.parse_args()
+    
+    run_local_test(
+        lstm_path=args.lstm_path,
+        trans_path=args.trans_path,
+        lstm_threshold=args.lstm_threshold,
+        trans_threshold=args.trans_threshold
+    )
