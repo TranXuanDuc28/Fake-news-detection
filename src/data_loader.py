@@ -126,7 +126,7 @@ class TransformerDataset(Dataset):
         return item
 
 
-def load_raw_data(data_dir="data", segment_words=False, additional_dataset="none", use_additional=None):
+def load_raw_data(data_dir="data", segment_words=False, additional_dataset="none", use_additional=None, use_eda=False):
     """Loads train, val, and test dataframes, handles missing values, checks for additional datasets, and applies text cleaning."""
     # Map legacy use_additional boolean parameter for backward compatibility
     if use_additional is not None:
@@ -135,7 +135,8 @@ def load_raw_data(data_dir="data", segment_words=False, additional_dataset="none
         elif additional_dataset == "none":
             additional_dataset = "legacy"
 
-    train_df = pd.read_csv(os.path.join(data_dir, "train.csv"))
+    suffix = "_eda" if use_eda else ""
+    train_df = pd.read_csv(os.path.join(data_dir, f"train{suffix}.csv"))
     val_df = pd.read_csv(os.path.join(data_dir, "val.csv"))
     test_df = pd.read_csv(os.path.join(data_dir, "test.csv"))
     
@@ -143,19 +144,19 @@ def load_raw_data(data_dir="data", segment_words=False, additional_dataset="none
     
     # Check additional_dataset mode and load matching splits
     if additional_dataset == "vfnd":
-        print("--> Đang tải bộ dữ liệu phụ: VFND (Original)...")
-        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "vfnd_train.csv")))
+        print(f"--> Đang tải bộ dữ liệu phụ: VFND (Original) [EDA: {use_eda}]...")
+        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, f"vfnd_train{suffix}.csv")))
         additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "vfnd_val.csv")))
         additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "vfnd_test.csv")))
     elif additional_dataset == "tingia":
-        print("--> Đang tải bộ dữ liệu phụ: TinGia Crawled (tingia.gov.vn)...")
-        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "tingia_train.csv")))
+        print(f"--> Đang tải bộ dữ liệu phụ: TinGia Crawled (tingia.gov.vn) [EDA: {use_eda}]...")
+        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, f"tingia_train{suffix}.csv")))
         additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "tingia_val.csv")))
         additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "tingia_test.csv")))
     elif additional_dataset == "both":
-        print("--> Đang tải bộ dữ liệu phụ: Cả VFND và TinGia Crawled...")
-        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "vfnd_train.csv")))
-        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "tingia_train.csv")))
+        print(f"--> Đang tải bộ dữ liệu phụ: Cả VFND và TinGia Crawled [EDA: {use_eda}]...")
+        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, f"vfnd_train{suffix}.csv")))
+        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, f"tingia_train{suffix}.csv")))
         additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "vfnd_val.csv")))
         additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "tingia_val.csv")))
         additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "vfnd_test.csv")))
@@ -178,41 +179,75 @@ def load_raw_data(data_dir="data", segment_words=False, additional_dataset="none
         print(f"--> Gộp thêm tập Test từ: {additional_dataset}")
         test_df = pd.concat([test_df] + additional_dfs["test"], ignore_index=True)
 
-    # Perform deduplication to prevent data leakage and redundancy
-    before_train = len(train_df)
-    train_df = train_df.drop_duplicates(subset=["post_message"], keep="first").reset_index(drop=True)
-    if len(train_df) < before_train:
-        print(f"--> Đã loại bỏ {before_train - len(train_df)} dòng trùng lặp trong tập Train.")
-        
-    before_val = len(val_df)
-    val_df = val_df.drop_duplicates(subset=["post_message"], keep="first").reset_index(drop=True)
-    if len(val_df) < before_val:
-        print(f"--> Đã loại bỏ {before_val - len(val_df)} dòng trùng lặp trong tập Val.")
-        
-    before_test = len(test_df)
-    test_df = test_df.drop_duplicates(subset=["post_message"], keep="first").reset_index(drop=True)
-    if len(test_df) < before_test:
-        print(f"--> Đã loại bỏ {before_test - len(test_df)} dòng trùng lặp trong tập Test.")
-
     # Fill NaN post messages with empty string
     train_df["post_message"] = train_df["post_message"].fillna("")
     val_df["post_message"] = val_df["post_message"].fillna("")
     test_df["post_message"] = test_df["post_message"].fillna("")
     
-    # Apply text cleaning
+    # Apply text cleaning first
     train_df["post_message"] = train_df["post_message"].apply(lambda x: clean_vietnamese_text(x, segment_words=segment_words))
     val_df["post_message"] = val_df["post_message"].apply(lambda x: clean_vietnamese_text(x, segment_words=segment_words))
     test_df["post_message"] = test_df["post_message"].apply(lambda x: clean_vietnamese_text(x, segment_words=segment_words))
+
+    # Lọc bỏ các dòng trống sau khi làm sạch
+    train_df = train_df[train_df["post_message"].str.strip() != ""].reset_index(drop=True)
+    val_df = val_df[val_df["post_message"].str.strip() != ""].reset_index(drop=True)
+    test_df = test_df[test_df["post_message"].str.strip() != ""].reset_index(drop=True)
+
+    # Chuẩn hóa để so sánh chính xác (bỏ khoảng trắng và viết thường)
+    def normalize_for_comparison(text):
+        return str(text).lower().strip().replace(" ", "")
+
+    train_df["compare_key"] = train_df["post_message"].apply(normalize_for_comparison)
+    val_df["compare_key"] = val_df["post_message"].apply(normalize_for_comparison)
+    test_df["compare_key"] = test_df["post_message"].apply(normalize_for_comparison)
+
+    # 1. Khử trùng lặp nội bộ trong mỗi tập
+    before_train = len(train_df)
+    train_df = train_df.drop_duplicates(subset=["compare_key"], keep="first").reset_index(drop=True)
+    if len(train_df) < before_train:
+        print(f"--> Đã loại bỏ {before_train - len(train_df)} dòng trùng lặp trong tập Train.")
+
+    before_val = len(val_df)
+    val_df = val_df.drop_duplicates(subset=["compare_key"], keep="first").reset_index(drop=True)
+    if len(val_df) < before_val:
+        print(f"--> Đã loại bỏ {before_val - len(val_df)} dòng trùng lặp trong tập Val.")
+
+    before_test = len(test_df)
+    test_df = test_df.drop_duplicates(subset=["compare_key"], keep="first").reset_index(drop=True)
+    if len(test_df) < before_test:
+        print(f"--> Đã loại bỏ {before_test - len(test_df)} dòng trùng lặp trong tập Test.")
+
+    # 2. Khử rò rỉ dữ liệu chéo (Cross-Split Data Leakage Prevention)
+    train_keys = set(train_df["compare_key"])
+    
+    # Loại bỏ khỏi Val các mẫu trùng với Train
+    before_val_leak = len(val_df)
+    val_df = val_df[~val_df["compare_key"].isin(train_keys)].reset_index(drop=True)
+    if len(val_df) < before_val_leak:
+        print(f"--> Đã loại bỏ {before_val_leak - len(val_df)} dòng rò rỉ dữ liệu (data leakage) trong tập Val.")
+
+    # Loại bỏ khỏi Test các mẫu trùng với Train hoặc Val
+    train_and_val_keys = train_keys.union(set(val_df["compare_key"]))
+    before_test_leak = len(test_df)
+    test_df = test_df[~test_df["compare_key"].isin(train_and_val_keys)].reset_index(drop=True)
+    if len(test_df) < before_test_leak:
+        print(f"--> Đã loại bỏ {before_test_leak - len(test_df)} dòng rò rỉ dữ liệu (data leakage) trong tập Test.")
+
+    # Xóa cột so sánh tạm thời
+    train_df = train_df.drop(columns=["compare_key"])
+    val_df = val_df.drop(columns=["compare_key"])
+    test_df = test_df.drop(columns=["compare_key"])
     
     return train_df, val_df, test_df
 
 
 
-def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=128, subset_size=None, tokenizer_name="distilbert-base-multilingual-cased", oversample=False, segment_words=None, additional_dataset="none", use_additional=None):
+def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=128, subset_size=None, tokenizer_name="distilbert-base-multilingual-cased", oversample=False, segment_words=None, additional_dataset="none", use_additional=None, use_eda=False):
     """Creates PyTorch dataloaders for the specified model type with optional oversampling."""
     if segment_words is None:
         segment_words = ("phobert" in tokenizer_name.lower())
-    train_df, val_df, test_df = load_raw_data(data_dir, segment_words=segment_words, additional_dataset=additional_dataset, use_additional=use_additional)
+    train_df, val_df, test_df = load_raw_data(data_dir, segment_words=segment_words, additional_dataset=additional_dataset, use_additional=use_additional, use_eda=use_eda)
     
     # Optional sub-sampling for faster hyperparameter search
     if subset_size is not None:
