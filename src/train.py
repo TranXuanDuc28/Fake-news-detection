@@ -144,7 +144,6 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
     # 2. Download zip file if not exists
     if not os.path.exists(txt_path):
         if not os.path.exists(zip_path):
-            print(f"--> Downloading PhoW2V pre-trained embeddings from {url}...")
             try:
                 req = urllib.request.Request(
                     url, 
@@ -154,8 +153,21 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
                     out_file.write(response.read())
                 print("--> Download completed successfully!")
             except Exception as e:
-                print(f"--> Error downloading embeddings: {e}")
-                return None
+                print(f"--> Urllib download failed: {e}. Trying fallback with wget/curl...")
+                try:
+                    import subprocess
+                    print("--> Attempting download via wget...")
+                    subprocess.run(["wget", "-q", "-O", zip_path, url], check=True)
+                    print("--> Download completed via wget!")
+                except Exception as wget_err:
+                    print(f"--> Wget failed: {wget_err}. Attempting download via curl...")
+                    try:
+                        import subprocess
+                        subprocess.run(["curl", "-s", "-L", "-o", zip_path, url], check=True)
+                        print("--> Download completed via curl!")
+                    except Exception as curl_err:
+                        print(f"--> Fallback download failed: {curl_err}")
+                        return None
         
         # Unzip
         print(f"--> Extracting {zip_name}...")
