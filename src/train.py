@@ -145,6 +145,7 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
     if not os.path.exists(txt_path):
         if not os.path.exists(zip_path):
             try:
+                print(f"--> Downloading PhoW2V pre-trained embeddings from {url}...")
                 req = urllib.request.Request(
                     url, 
                     headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -166,30 +167,48 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
                         subprocess.run(["curl", "-s", "-L", "-o", zip_path, url], check=True)
                         print("--> Download completed via curl!")
                     except Exception as curl_err:
-                        print(f"--> Fallback download failed: {curl_err}")
-                        return None
+                        print(f"--> Primary URL failed. Trying mirror on Hugging Face...")
+                        if not segment_words:
+                            hf_mirror_url = "https://huggingface.co/ducdatit2002/vietnamese-emotion-text-classification/resolve/main/word2vec_vi_syllables_100dims.txt"
+                            print(f"--> Downloading syllable mirror from Hugging Face: {hf_mirror_url} ...")
+                            try:
+                                import subprocess
+                                subprocess.run(["wget", "-q", "-O", txt_path, hf_mirror_url], check=True)
+                                print("--> Mirror download completed via wget!")
+                            except Exception as hf_wget_err:
+                                try:
+                                    import subprocess
+                                    subprocess.run(["curl", "-s", "-L", "-o", txt_path, hf_mirror_url], check=True)
+                                    print("--> Mirror download completed via curl!")
+                                except Exception as hf_curl_err:
+                                    print(f"--> Mirror download failed: {hf_curl_err}")
+                                    return None
+                        else:
+                            print("--> No word-level mirror available. Fallback failed.")
+                            return None
         
-        # Unzip
-        print(f"--> Extracting {zip_name}...")
-        try:
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                txt_files = [f for f in zip_ref.namelist() if f.endswith('.txt')]
-                if txt_files:
-                    target_file = txt_files[0]
-                    zip_ref.extract(target_file, data_dir)
-                    extracted_path = os.path.join(data_dir, target_file)
-                    if extracted_path != txt_path:
-                        if os.path.exists(txt_path):
-                            os.remove(txt_path)
-                        os.rename(extracted_path, txt_path)
-                else:
-                    zip_ref.extractall(data_dir)
-            print("--> Extraction completed!")
-            if os.path.exists(zip_path):
-                os.remove(zip_path)
-        except Exception as e:
-            print(f"--> Error extracting zip file: {e}")
-            return None
+        # Unzip if zip was downloaded
+        if os.path.exists(zip_path):
+            print(f"--> Extracting {zip_name}...")
+            try:
+                with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                    txt_files = [f for f in zip_ref.namelist() if f.endswith('.txt')]
+                    if txt_files:
+                        target_file = txt_files[0]
+                        zip_ref.extract(target_file, data_dir)
+                        extracted_path = os.path.join(data_dir, target_file)
+                        if extracted_path != txt_path:
+                            if os.path.exists(txt_path):
+                                os.remove(txt_path)
+                            os.rename(extracted_path, txt_path)
+                    else:
+                        zip_ref.extractall(data_dir)
+                print("--> Extraction completed!")
+                if os.path.exists(zip_path):
+                    os.remove(zip_path)
+            except Exception as e:
+                print(f"--> Error extracting zip file: {e}")
+                return None
 
     # 3. Read txt file and load vectors
     print(f"--> Loading pre-trained vectors from {txt_path}...")
