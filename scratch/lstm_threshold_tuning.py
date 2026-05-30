@@ -31,12 +31,17 @@ def tune_threshold(model_path="models/best_lstm.pt", data_dir="data", additional
     vocab.word2idx = vocab_word2idx
     vocab.vocab_size = len(vocab_word2idx)
     
+    # Retrieve resolved_segment_words from hyperparameters
+    resolved_segment_words = hyperparams.get("segment_words", False)
+    print(f"Detected segment_words from model checkpoint: {resolved_segment_words}")
+    
     # Load loaders
     print("Loading data splits...")
     train_loader, val_loader, test_loader, _ = get_dataloaders(
         data_dir=data_dir,
         model_type="lstm",
         batch_size=16,
+        segment_words=resolved_segment_words,
         additional_dataset=additional_dataset
     )
     
