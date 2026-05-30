@@ -84,14 +84,14 @@ def crawl_tingia_fake_news():
                             "post_message": full_text,
                             "label": 1  # Fake News
                         })
-                    time.sleep(0.5) # Gentle request rate limit
+                    time.sleep(0.1) # Gentle request rate limit
                 except Exception as e:
                     print(f"  Error crawling detail {link}: {e}")
                     
             page += 1
-            # Limit to page 8 (around 80-120 items) to keep it fast
-            if page > 8:
-                print("Reached page limit (page 8). Stopping.")
+            # Limit to page 50 to get as much as possible
+            if page > 50:
+                print("Reached page limit (page 50). Stopping.")
                 break
                 
         except Exception as e:
@@ -106,9 +106,18 @@ def crawl_vnexpress_real_news(target_count):
     rss_urls = [
         "https://vnexpress.net/rss/thoi-su.rss",
         "https://vnexpress.net/rss/the-gioi.rss",
+        "https://vnexpress.net/rss/kinh-doanh.rss",
+        "https://vnexpress.net/rss/startup.rss",
+        "https://vnexpress.net/rss/giai-tri.rss",
+        "https://vnexpress.net/rss/the-thao.rss",
         "https://vnexpress.net/rss/phap-luat.rss",
         "https://vnexpress.net/rss/giao-duc.rss",
-        "https://vnexpress.net/rss/suc-khoe.rss"
+        "https://vnexpress.net/rss/suc-khoe.rss",
+        "https://vnexpress.net/rss/doi-song.rss",
+        "https://vnexpress.net/rss/du-lich.rss",
+        "https://vnexpress.net/rss/khoa-hoc.rss",
+        "https://vnexpress.net/rss/so-hoa.rss",
+        "https://vnexpress.net/rss/oto-xe-may.rss"
     ]
     
     article_links = []
@@ -161,7 +170,7 @@ def crawl_vnexpress_real_news(target_count):
                     "post_message": full_text,
                     "label": 0  # Real News
                 })
-            time.sleep(0.5)
+            time.sleep(0.05)
         except Exception as e:
             print(f"  Error fetching VnExpress article {link}: {e}")
             
@@ -176,8 +185,8 @@ if __name__ == "__main__":
         print("No fake news crawled. Exiting.")
         sys.exit(1)
         
-    # 2. Crawl balanced number of real news
-    target_real_count = len(fake_news)
+    # 2. Crawl 10,000 real news articles
+    target_real_count = 10000
     real_news = crawl_vnexpress_real_news(target_real_count)
     
     # 3. Combine and save to data/tingia_crawled.csv
