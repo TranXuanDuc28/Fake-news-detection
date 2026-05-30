@@ -147,41 +147,19 @@ def load_raw_data(data_dir="data", segment_words=False, additional_dataset="none
         additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "vfnd_train.csv")))
         additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "vfnd_val.csv")))
         additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "vfnd_test.csv")))
-    elif additional_dataset == "crawled":
-        print("--> Đang tải bộ dữ liệu phụ: Custom Crawled Data...")
-        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "crawled_train.csv")))
-        additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "crawled_val.csv")))
-        additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "crawled_test.csv")))
     elif additional_dataset == "tingia":
         print("--> Đang tải bộ dữ liệu phụ: TinGia Crawled (tingia.gov.vn)...")
         additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "tingia_train.csv")))
         additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "tingia_val.csv")))
         additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "tingia_test.csv")))
     elif additional_dataset == "both":
-        print("--> Đang tải bộ dữ liệu phụ: Cả VFND và Custom Crawled Data...")
+        print("--> Đang tải bộ dữ liệu phụ: Cả VFND và TinGia Crawled...")
         additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "vfnd_train.csv")))
-        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "crawled_train.csv")))
+        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "tingia_train.csv")))
         additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "vfnd_val.csv")))
-        additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "crawled_val.csv")))
+        additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "tingia_val.csv")))
         additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "vfnd_test.csv")))
-        additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "crawled_test.csv")))
-    elif additional_dataset == "all":
-        print("--> Đang tải tất cả bộ dữ liệu phụ (VFND, Crawled, TinGia)...")
-        additional_dfs["train"].extend([
-            pd.read_csv(os.path.join(data_dir, "vfnd_train.csv")),
-            pd.read_csv(os.path.join(data_dir, "crawled_train.csv")),
-            pd.read_csv(os.path.join(data_dir, "tingia_train.csv"))
-        ])
-        additional_dfs["val"].extend([
-            pd.read_csv(os.path.join(data_dir, "vfnd_val.csv")),
-            pd.read_csv(os.path.join(data_dir, "crawled_val.csv")),
-            pd.read_csv(os.path.join(data_dir, "tingia_val.csv"))
-        ])
-        additional_dfs["test"].extend([
-            pd.read_csv(os.path.join(data_dir, "vfnd_test.csv")),
-            pd.read_csv(os.path.join(data_dir, "crawled_test.csv")),
-            pd.read_csv(os.path.join(data_dir, "tingia_test.csv"))
-        ])
+        additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "tingia_test.csv")))
     elif additional_dataset == "legacy":
         # Load data/additional_train.csv if it exists
         legacy_path = os.path.join(data_dir, "additional_train.csv")
