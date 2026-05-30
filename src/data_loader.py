@@ -126,31 +126,73 @@ class TransformerDataset(Dataset):
         return item
 
 
-def load_raw_data(data_dir="data", segment_words=False, use_additional=True):
+def load_raw_data(data_dir="data", segment_words=False, additional_dataset="none", use_additional=None):
     """Loads train, val, and test dataframes, handles missing values, checks for additional datasets, and applies text cleaning."""
+    # Map legacy use_additional boolean parameter for backward compatibility
+    if use_additional is not None:
+        if not use_additional:
+            additional_dataset = "none"
+        elif additional_dataset == "none":
+            additional_dataset = "legacy"
+
     train_df = pd.read_csv(os.path.join(data_dir, "train.csv"))
     val_df = pd.read_csv(os.path.join(data_dir, "val.csv"))
     test_df = pd.read_csv(os.path.join(data_dir, "test.csv"))
     
-    # Tự động phát hiện và gộp bộ dữ liệu bổ sung nếu có
-    if use_additional:
-        additional_path = os.path.join(data_dir, "additional_train.csv")
-        if os.path.exists(additional_path):
-            print(f"--> Phát hiện bộ dữ liệu bổ sung: {additional_path}. Tiến hành gộp dữ liệu...")
-            try:
-                additional_df = pd.read_csv(additional_path)
-                if "post_message" in additional_df.columns and "label" in additional_df.columns:
-                    additional_df = additional_df[["post_message", "label"]]
-                    train_df = pd.concat([train_df, additional_df], ignore_index=True)
-                    print(f"--> Gộp dữ liệu thành công! Kích thước tập Train sau gộp: {len(train_df)} dòng.")
-                else:
-                    print("--> Cảnh báo: Tệp additional_train.csv thiếu cột 'post_message' hoặc 'label'. Bỏ qua gộp.")
-            except Exception as e:
-                print(f"--> Lỗi đọc tệp additional_train.csv: {e}. Bỏ qua gộp.")
-        else:
-            print("--> Không tìm thấy tệp additional_train.csv để gộp.")
-    else:
-        print("--> Không sử dụng bộ dữ liệu bổ sung (additional_train.csv) theo cấu hình.")
+    additional_dfs = {"train": [], "val": [], "test": []}
+    
+    # Check additional_dataset mode and load matching splits
+    if additional_dataset == "vfnd":
+        print("--> Đang tải bộ dữ liệu phụ: VFND (Original)...")
+        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "vfnd_train.csv")))
+        additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "vfnd_val.csv")))
+        additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "vfnd_test.csv")))
+    elif additional_dataset == "crawled":
+        print("--> Đang tải bộ dữ liệu phụ: Custom Crawled Data...")
+        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "crawled_train.csv")))
+        additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "crawled_val.csv")))
+        additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "crawled_test.csv")))
+    elif additional_dataset == "both":
+        print("--> Đang tải bộ dữ liệu phụ: Cả VFND và Custom Crawled Data...")
+        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "vfnd_train.csv")))
+        additional_dfs["train"].append(pd.read_csv(os.path.join(data_dir, "crawled_train.csv")))
+        additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "vfnd_val.csv")))
+        additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "crawled_val.csv")))
+        additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "vfnd_test.csv")))
+        additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "crawled_test.csv")))
+    elif additional_dataset == "legacy":
+        # Load data/additional_train.csv if it exists
+        legacy_path = os.path.join(data_dir, "additional_train.csv")
+        if os.path.exists(legacy_path):
+            print(f"--> Phát hiện bộ dữ liệu bổ sung: {legacy_path}. Tiến hành gộp dữ liệu...")
+            additional_dfs["train"].append(pd.read_csv(legacy_path))
+            
+    # Concatenate and clean
+    if additional_dfs["train"]:
+        print(f"--> Gộp thêm tập Train từ: {additional_dataset}")
+        train_df = pd.concat([train_df] + additional_dfs["train"], ignore_index=True)
+    if additional_dfs["val"]:
+        print(f"--> Gộp thêm tập Val từ: {additional_dataset}")
+        val_df = pd.concat([val_df] + additional_dfs["val"], ignore_index=True)
+    if additional_dfs["test"]:
+        print(f"--> Gộp thêm tập Test từ: {additional_dataset}")
+        test_df = pd.concat([test_df] + additional_dfs["test"], ignore_index=True)
+
+    # Perform deduplication to prevent data leakage and redundancy
+    before_train = len(train_df)
+    train_df = train_df.drop_duplicates(subset=["post_message"], keep="first").reset_index(drop=True)
+    if len(train_df) < before_train:
+        print(f"--> Đã loại bỏ {before_train - len(train_df)} dòng trùng lặp trong tập Train.")
+        
+    before_val = len(val_df)
+    val_df = val_df.drop_duplicates(subset=["post_message"], keep="first").reset_index(drop=True)
+    if len(val_df) < before_val:
+        print(f"--> Đã loại bỏ {before_val - len(val_df)} dòng trùng lặp trong tập Val.")
+        
+    before_test = len(test_df)
+    test_df = test_df.drop_duplicates(subset=["post_message"], keep="first").reset_index(drop=True)
+    if len(test_df) < before_test:
+        print(f"--> Đã loại bỏ {before_test - len(test_df)} dòng trùng lặp trong tập Test.")
 
     # Fill NaN post messages with empty string
     train_df["post_message"] = train_df["post_message"].fillna("")
@@ -166,11 +208,11 @@ def load_raw_data(data_dir="data", segment_words=False, use_additional=True):
 
 
 
-def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=128, subset_size=None, tokenizer_name="distilbert-base-multilingual-cased", oversample=False, segment_words=None, use_additional=True):
+def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=128, subset_size=None, tokenizer_name="distilbert-base-multilingual-cased", oversample=False, segment_words=None, additional_dataset="none", use_additional=None):
     """Creates PyTorch dataloaders for the specified model type with optional oversampling."""
     if segment_words is None:
         segment_words = ("phobert" in tokenizer_name.lower())
-    train_df, val_df, test_df = load_raw_data(data_dir, segment_words=segment_words, use_additional=use_additional)
+    train_df, val_df, test_df = load_raw_data(data_dir, segment_words=segment_words, additional_dataset=additional_dataset, use_additional=use_additional)
     
     # Optional sub-sampling for faster hyperparameter search
     if subset_size is not None:

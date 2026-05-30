@@ -224,7 +224,7 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
     print(f"--> Vocab coverage: {matched_count}/{vocab_size} words ({matched_count/vocab_size:.2%}) initialized from pre-trained PhoW2V.")
     return torch.tensor(weight_matrix, dtype=torch.float32)
 
-def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5, resume=True, transformer_model_name="vinai/phobert-base", segment_words=None, embedding_dim=64, hidden_dim=64, use_pretrained_emb=False, use_additional=True):
+def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freeze_backbone=True, subset_size=None, save_dir="models", data_dir="data", oversample=True, use_class_weights=False, patience=5, resume=True, transformer_model_name="vinai/phobert-base", segment_words=None, embedding_dim=64, hidden_dim=64, use_pretrained_emb=False, additional_dataset="none"):
     os.makedirs(save_dir, exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\n--- Training {model_type.upper()} model on device: {device} ---")
@@ -235,12 +235,12 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
         
     # Resolve segment_words actual value for printing
     resolved_segment_words = segment_words if segment_words is not None else ("phobert" in transformer_model_name.lower() if model_type == "transformer" else False)
-    print(f"Params: Epochs={epochs}, BatchSize={batch_size}, LR={lr}, Dropout={dropout}, Subset={subset_size}, Oversample={oversample}, UseClassWeights={use_class_weights}, Patience={patience}, SegmentWords={resolved_segment_words}, EmbeddingDim={embedding_dim}, HiddenDim={hidden_dim}, UsePretrainedEmb={use_pretrained_emb}, UseAdditional={use_additional}")
+    print(f"Params: Epochs={epochs}, BatchSize={batch_size}, LR={lr}, Dropout={dropout}, Subset={subset_size}, Oversample={oversample}, UseClassWeights={use_class_weights}, Patience={patience}, SegmentWords={resolved_segment_words}, EmbeddingDim={embedding_dim}, HiddenDim={hidden_dim}, UsePretrainedEmb={use_pretrained_emb}, AdditionalDataset={additional_dataset}")
     
     # Get DataLoaders
     if model_type == "lstm":
         train_loader, val_loader, test_loader, vocab = get_dataloaders(
-            data_dir=data_dir, model_type="lstm", batch_size=batch_size, subset_size=subset_size, oversample=oversample, segment_words=segment_words, use_additional=use_additional
+            data_dir=data_dir, model_type="lstm", batch_size=batch_size, subset_size=subset_size, oversample=oversample, segment_words=segment_words, additional_dataset=additional_dataset
         )
         
         pretrained_weights = None
@@ -262,7 +262,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
             model.embedding.weight.data.copy_(pretrained_weights)
     else: # transformer
         train_loader, val_loader, test_loader, tokenizer = get_dataloaders(
-            data_dir=data_dir, model_type="transformer", batch_size=batch_size, subset_size=subset_size, oversample=oversample, tokenizer_name=transformer_model_name, segment_words=segment_words, use_additional=use_additional
+            data_dir=data_dir, model_type="transformer", batch_size=batch_size, subset_size=subset_size, oversample=oversample, tokenizer_name=transformer_model_name, segment_words=segment_words, additional_dataset=additional_dataset
         )
         model = TransformerClassifier(
             model_name=transformer_model_name,
@@ -359,7 +359,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
                     "use_pretrained_emb": use_pretrained_emb if model_type == "lstm" else None,
                     "freeze_backbone": freeze_backbone if model_type == "transformer" else None,
                     "transformer_model_name": transformer_model_name if model_type == "transformer" else None,
-                    "use_additional": use_additional
+                    "additional_dataset": additional_dataset
                 }
             }
             # For LSTM we must save vocab so we can encode words for inference
@@ -446,10 +446,15 @@ if __name__ == "__main__":
     parser.add_argument("--embedding_dim", type=int, default=64, help="Embedding dimension for LSTM model")
     parser.add_argument("--hidden_dim", type=int, default=64, help="Hidden dimension for LSTM model")
     parser.add_argument("--use_pretrained_emb", action="store_true", help="Use pre-trained PhoW2V word embeddings for LSTM")
-    parser.add_argument("--no_additional", action="store_false", dest="use_additional", help="Do not merge VFND additional dataset (trains on original train.csv only)")
+    parser.add_argument("--additional_dataset", type=str, default="none", choices=["none", "vfnd", "crawled", "both", "legacy"], help="Additional dataset to merge into train/val/test splits")
+    parser.add_argument("--no_additional", action="store_true", help="Shortcut to disable additional dataset (equivalent to --additional_dataset none)")
     
     args = parser.parse_args()
     
+    # Overwrite additional_dataset with 'none' if --no_additional flag is passed
+    if args.no_additional:
+        args.additional_dataset = "none"
+        
     # Run training
     history, test_metrics = train_model(
         model_type=args.model,
@@ -470,7 +475,7 @@ if __name__ == "__main__":
         embedding_dim=args.embedding_dim,
         hidden_dim=args.hidden_dim,
         use_pretrained_emb=args.use_pretrained_emb,
-        use_additional=args.use_additional
+        additional_dataset=args.additional_dataset
     )
     
     if args.history_file:
