@@ -178,7 +178,7 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data"):
                             except: pass
                         print(f"--> Primary URL failed. Trying mirror on Hugging Face...")
                         if not segment_words:
-                            hf_mirror_url = "https://huggingface.co/ducdatit2002/vietnamese-emotion-text-classification/resolve/main/word2vec_vi_syllables_100dims.txt"
+                            hf_mirror_url = "https://huggingface.co/ducdatit2002/vietnamese-emotion-text-classification/resolve/main/word2vec_vi_syllables_100dims.txt?download=true"
                             print(f"--> Downloading syllable mirror from Hugging Face: {hf_mirror_url} ...")
                             try:
                                 import subprocess
