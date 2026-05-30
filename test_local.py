@@ -62,204 +62,164 @@ RESET = "\033[0m"
 # Define test cases
 TEST_CASES = [
     {
-        "text": "Bộ Y tế khuyến cáo người dân đeo khẩu trang và rửa tay sát khuẩn thường xuyên để phòng ngừa dịch bệnh lây lan trong cộng đồng.",
+        "text": "Chúng_tôi bất_ngờ khi nhìn thấy ngôi nhà khá to , đẹp của một gia_đình có số hộ cận nghèo .Được biết Chủ_hộ là chị_gái bí_thư chi_bộ thôn",
         "label": "TIN THẬT (REAL)"
     },
     {
-        "text": "TIN NÓNG KHẨN CẤP: Một loài vi-rút mới cực kỳ nguy hiểm đang lây lan qua không khí làm chết người chỉ trong 5 phút. Hãy chia sẻ gấp thông tin này để cứu sống người thân của bạn!",
+        "text": "Kỳ thị cũng là một loại virus, và sức mạnh của nó tương tự SARS-CoV-2: đẩy con người ra xa nhau hơn.  Người mắc COVID-19 rồi cũng sẽ được chữa khỏi, nhưng người mắc tâm lý kỳ thị sẽ chỉ khỏi bệnh khi chính mình trở thành mục tiêu của những người khác.  #COVID19 #DungKyThi #Diemtuan #BtvVietHoang",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Không_thể trồng_trọt , thả cá , nhà thì ngập mỗi khi trời mưa .Mùi phân gà , phân vịt và nước_thải lưu_cữu nhiều năm .Người_dân phải chờ đến bao_giờ nữa cán_bộ ơi ?",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Ngài Thẩm phán này mà giữ chức Chánh cao cao thì công an các trại tù chắc thất nghiệp dài dài vì xử xong là phạm nhân tự chết , có vô tù nữa đâu mà cần người giữ ?",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Trường Đại học Bách khoa Hà Nội công bố phương án tuyển sinh năm học mới, tăng chỉ tiêu xét tuyển bằng điểm thi tốt nghiệp THPT.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Bí mật chấn động thế giới: Các nhà khoa học đã tìm ra phương pháp chữa khỏi hoàn toàn bệnh ung thư giai đoạn cuối chỉ bằng cách uống nước chanh ấm pha muối mỗi sáng.",
+        "text": "Người trong ảnh này mà công_an Cầu_Giấy đưa lên báo là ông Phương ( hay Thiện ) sinh năm 1962 , anh ruột của ông Phiến , sinh năm 1966 .Ông Thiện tóc bạc , ông Phiến tóc còn đen .",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Ủy ban Nhân dân Thành phố Hồ Chí Minh đề xuất mở rộng tuyến đường vành đai 2 nhằm giảm thiểu ùn tắc giao thông tại các cửa ngõ thành phố.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Đoàn thể thao Việt Nam đã giành thêm 2 huy chương vàng tại kỳ SEA Games, vươn lên vị trí thứ ba trên bảng tổng sắp huy chương.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Từ ngày 1/7, tăng mức lương cơ sở đối với cán bộ, công chức, viên chức và lực lượng vũ trang lên 1,8 triệu đồng/tháng.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Ngân hàng Nhà nước Việt Nam quyết định giảm các mức lãi suất điều hành nhằm hỗ trợ doanh nghiệp và thúc đẩy tăng trưởng kinh tế.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Nhiều trường tiểu học tại Hà Nội tổ chức ngày hội sách nhằm lan tỏa văn hóa đọc và khuyến khích học sinh tìm tòi tri thức mới.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Cảnh báo khẩn cấp từ công an: Tuyệt đối không nghe cuộc gọi từ các đầu số lạ này kẻo bị hack toàn bộ tài khoản ngân hàng và mất sạch tiền trong 3 giây!",
+        "text": "FPT Online cắt giảm 42,5% chi phí nhân công, có đồng nghiệp nào bên Vnexpress, Ngoisao và Ione bị giảm lương không ạ?",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Ăn tỏi sống ngâm giấm mỗi ngày sẽ giúp tiêu diệt hoàn toàn tế bào ung thư vú và ung thư phổi, bác sĩ giấu kín vì sợ mất khách!",
+        "text": "COV-19 về đến hồng_lĩnh rồi bà_con ơi , Hiện đang cách_ly mười mấy người ở trường lái hồng_lĩnh .Bà_con hạn_chế đi_lại nhé",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Rúng động: Người đàn ông ở miền Tây bắt được sinh vật lạ giống hệt rồng thần trong truyền thuyết, ai xem cũng phải chia sẻ để lấy may mắn.",
-        "label": "TIN GIẢ (FAKE)"
-    },
-    {
-        "text": "Hãng hàng không quốc gia tặng 2 vé máy bay miễn phí cho tất cả khách hàng kỷ niệm 50 năm thành lập, nhấn vào link này để nhận ngay quà tặng!",
-        "label": "TIN GIẢ (FAKE)"
-    },
-    {
-        "text": "Mẹ thiên nhiên trừng phạt: Trái Đất chuẩn bị bước vào 3 ngày tối tăm liên tục do hiện tượng thiên văn kỳ lạ, mọi người cần tích trữ lương thực ngay!",
-        "label": "TIN GIẢ (FAKE)"
-    },
-    {
-        "text": "Thủ tướng Chính phủ yêu cầu các bộ, ngành khẩn trương triển khai các biện pháp bình ổn thị trường vàng, không để xảy ra tình trạng đầu cơ, làm giá.",
+        "text": "Tuổi_thơ chân_đất , đầu trần ...Ai cũng có thời như_vậy , nhưng khi lớn lên mỗi người lại có 1 con đường riêng .Những đón_nhận của ngày hôm_nay chính là cái đích trên 1 ngã rẽ nào đó mà chúng_ta đã từng lựa_chọn .< URL >",
         "label": "TIN THẬT (REAL)"
     },
     {
-        "text": "Cảnh báo: Bọn tội phạm đang dùng công nghệ AI giả giọng nói của người thân gọi điện xin tiền cứu cấp, chỉ cần nghe máy 10 giây là tài khoản bị tự động rút sạch.",
+        "text": "Chung cư Hòa Bình với hơn 1.000 người dân ở <URL> được cơ quan chức năng cách ly sau khi phát hiện ca nhiễm virus SARS CoV-2 thứ 48 sống tại đây.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "GS đoạt Nobel Y học Pháp: SARS-CoV-2 là vaccine chống HIV từ phòng thí nghiệm Vũ Hán.",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Việt Nam chính thức đưa vào vận hành hệ thống đăng ký hộ tịch trực tuyến toàn quốc, giúp rút ngắn thời gian xử lý thủ tục hành chính cho người dân.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Chúc mừng bạn đã trúng một chiếc điện thoại iPhone 15 Pro Max từ chương trình tri ân của tập đoàn công nghệ Vingroup. Vui lòng bấm vào liên kết vin-tri-an.net để cung cấp thông tin nhận giải!",
+        "text": "WARNING May_mắn cho những_ai đã kịp xin visa du_học Mỹ tuần vừa_rồi .Mỹ đã chính_thức ngưng cấp visa cho du_học_sinh Việt_Nam và các nước ĐNA khác - vô_thời_hạn .Các em du_học_sinh xác_định rồi nhé !Học trong nước thì không học , đi du_học làm gì .Có đâu bằng VN .",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Kỳ thi tốt nghiệp THPT năm nay sẽ được tổ chức trong hai ngày với đóng góp của bốn bài thi độc lập, đảm bảo quy chế phòng thi nghiêm ngặt trên cả nước.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Bí quyết trường thọ cực kỳ đơn giản: Chỉ cần ăn một quả chuối chín đắp lá lốt nướng vào mỗi buổi tối sẽ tiêu diệt hoàn toàn độc tố tích tụ trong gan cả đời.",
+        "text": "Tỷ phú Trung Quốc Quách Văn Qúy nói: 1.200 Thi thể bị thiêu mỗi ngày Hơn 250 triệu người bị cách ly... 1,5 triệu người được xác nhận đã nhiễm virus Corona, Covid19 Không phải 20.000, hoặc 30.000 mà hơn 50.000 người đã chết do bệnh dịch.",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Tổ chức Y tế Thế giới (WHO) khuyến nghị tăng cường giám sát các biến thể mới của virus SARS-CoV-2 nhằm chủ động ứng phó dịch bệnh.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Tin nóng Bình Dương: Phát hiện ổ dịch mới nguy hiểm với hơn 500 người nhiễm bệnh, chính quyền đang chuẩn bị phong tỏa toàn thành phố từ đêm nay.",
+        "text": "Thêm 45.000 ca mới 1 ngày, Mỹ vẫn căng nhể. Nhiều bang như California, Texas, Florida đều ghi nhận số ca mắc Covid-19 mới cao kỷ lục.",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Ngân hàng Thương mại Cổ phần Sài Gòn (SCB) công bố biểu phí dịch vụ tài khoản mới áp dụng cho khách hàng cá nhân kể từ đầu tháng sau.",
+        "text": "Sở GTVT < URL > đề_xuất vẫn cho xe taxi , xe taxi công_nghệ hoạt_động bình_thường , hạn_chế phương_tiện công_cộng .",
         "label": "TIN THẬT (REAL)"
     },
     {
-        "text": "Cảnh báo khẩn: Tập đoàn Vạn Thịnh Phát câu kết với ngân hàng để chiếm đoạt toàn bộ sổ tiết kiệm của khách hàng gửi tiền, người dân hãy đến rút sạch tiền ngay lập tức!",
+        "text": "Nếu còn được có công ăn việc làm tử tế, vẫn được nhận khoản lương định kì mỗi tháng dù công ty đang chao đảo - hãy thực sự biết ơn vì bạn đã và đang may mắn hơn hàng triệu người ngoài kia...  #KenhDoiSong",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Ai chưa xem tin tức thì cập nhật ngay nhé. GS người Pháp Raoult - giám đốc Viện nghiên cứu Bệnh viện đại học (IUH) chuyên bệnh truyền nhiễm Địa Trung Hải ở Marseille - đã khẳng định dịch sẽ hết trong 3 tuần tới tại Pháp và 6 tuần trên thế giới.",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Sở Giáo dục và Đào tạo Hà Nội thông báo lịch nghỉ Tết Nguyên đán chính thức của học sinh các cấp trên địa bàn thành phố.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Ăn lá đu đủ đun sôi cùng sả trong 10 ngày sẽ làm tiêu biến hoàn toàn khối u ung thư cổ tử cung, bài thuốc dân gian thần kỳ không cần hóa trị.",
+        "text": "Đúng là quả báo không chừa một ai! Kẻ tắc trách đã bị trừng trị. Thông báo với các bậc phụ huynh, tên lái xe trường Gateway Doãn Quý Phiến đã chính thức tử nạn - đền tội cho những gì hắn đã gây ra. Tôi còn đang chờ xem chuyện gì sẽ xảy ra với những kẻ liên quan!",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Bộ Tài chính đề xuất giảm thuế giá trị gia tăng (VAT) từ 10% xuống 8% đối với một số nhóm hàng hóa, dịch vụ trong năm nay.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Chấn động: Một phụ nữ tại Hải Phòng sinh ra em bé có cánh và biết bay ngay khi vừa chào đời, các nhà khoa học đang đến nghiên cứu trực tiếp.",
+        "text": "Bã dương_tính rồi bà_con ... anh người_yêu và bao nhiu người đã từng tiếp_xúc chơi tết ... gia_đình bã ... thôi rồi ... tiêu rồi ..Làm_sao kiểm_soát đc những ng từng tiếp_xúc với mụ đó",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Thủ tướng Phạm Minh Chính chủ trì cuộc họp thường kỳ chính phủ đánh giá tình hình kinh tế - xã hội tháng qua và bàn giải pháp thúc đẩy đầu tư công.",
+        "text": "Sau ATM gạo, ATM sách, liệu còn ATM gì nhỉ?  [<URL>](<URL>)",
         "label": "TIN THẬT (REAL)"
     },
     {
-        "text": "Cảnh báo lừa đảo: Cuộc gọi giả danh cơ quan công an yêu cầu chuyển tiền vào tài khoản tạm giữ để phục vụ điều tra chuyên án ma túy.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Thần y tiết lộ: Chỉ cần nhỏ 3 giọt nước cốt tỏi vào mắt mỗi tối sẽ trị dứt điểm mọi bệnh cận thị, loạn thị mà không cần phẫu thuật.",
+        "text": "Tăng mạnh nhất thế giới chứng khoán Việt Nam  Hay hỏng và lỗi lúc nhạy cảm nhất là chứng khoán Việt Nam!  Thua lỗ đau đớn phút 91 là nhà đầu tư... đề nghị ubck làm rõ phiên giao dịch ngày hôm nay  Không ngoại trừ thao túng",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Ủy ban Thường vụ Quốc hội cho ý kiến về dự án Luật Bảo hiểm xã hội sửa đổi, tập trung vào các chế độ rút bảo hiểm một lần.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Nhật Bản phát minh ra loại vaccine mới có thể ngăn ngừa lão hóa và giúp con người trẻ mãi không già, dự kiến bán ra thị trường năm sau.",
+        "text": "Ở Bệnh Viện CuBa mình vừa có 3 ca nhiễm vi khuẩn ăn thịt người rồi mn ơi... Cảnh giác nhé",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Tổng cục Thống kê công báo chỉ số giá tiêu dùng (CPI) tăng nhẹ so với cùng kỳ năm trước, lạm phát vẫn trong tầm kiểm soát.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Tin giật gân: Trùm phát xít Hitler vẫn còn sống ở tuổi 135 tại một căn hầm bí mật ở Nam Cực và đang chuẩn bị lực lượng quay trở lại thế giới.",
+        "text": "CHÚNG TA ĐỪNG QUÁ BUỒN: BÁO CHÍ FAKE NEWS NHƯ CNN CŨNG KHỐN NẠN LẮM, TẤN CÔNG SẾP TESLA VÔ LỐI VÌ MÁY TRỢ THỞ, SAU KHI SAI RỒI CŨNG CHẲNG THÈM XIN LỖI. Thế giới không điên mới là lạ? (có thể dùng google dịch ra tiếng Việt nếu không đọc được tiếng Anh)",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Công ty Điện lực Việt Nam (EVN) khuyến nghị người dân tiết kiệm điện trong những ngày nắng nóng đỉnh điểm để tránh quá tải hệ thống.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Phương pháp giảm cân thần tốc: Chỉ cần uống hỗn hợp giấm ăn và muối trắng thay nước lọc mỗi ngày sẽ giảm ngay 15kg trong một tuần.",
+        "text": "\" Còn bạn nào khẩu nghiệp , có dám tới bưu điện Cầu Voi ban_đêm rồi thề với hai cô gái coi có bị vặn cổ không ! \" Đã có 1 anh bị rồi đấy",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Bộ Công an triệt phá đường dây đánh bạc qua mạng với quy mô giao dịch lên đến hàng nghìn tỷ đồng, bắt giữ hàng chục đối tượng liên quan.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Tập đoàn công nghệ Apple chính thức ra mắt dòng sản phẩm kính thực tế ảo mới với nhiều cải tiến công nghệ đột phá tại Mỹ.",
-        "label": "TIN THẬT (REAL)"
-    },
-    {
-        "text": "Bí mật vũ trụ: Các nhà du hành vũ trụ phát hiện căn cứ của người ngoài hành tinh trên vùng tối của Mặt Trăng nhưng bị Mỹ ép ký cam kết bảo mật.",
+        "text": "Bannon thẳng_thừng chỉ_trích Trung_Quốc và các \" đồng_minh \" như Kissinger , Bill_Gates khiến truyền_thông Trung_Quốc \" gây_chiến \" với ông !",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Việt Nam xuất khẩu lô xoài cát Hòa Lộc đầu tiên sang thị trường Hoa Kỳ sau khi vượt qua các tiêu chuẩn kiểm dịch thực vật nghiêm ngặt.",
+        "text": "Lạm_phát hạ nhiệt sẽ tạo điều_kiện để Ngân_hàng Nhà_nước giảm tiếp lãi_suất điều_hành trong nửa cuối năm , theo VnDirect .",
         "label": "TIN THẬT (REAL)"
     },
     {
-        "text": "Khẩn cấp: Sóng thần cao 50 mét đang hướng thẳng vào các tỉnh ven biển miền Trung Việt Nam sau trận động đất mạnh ở Thái Bình Dương.",
-        "label": "TIN GIẢ (FAKE)"
-    },
-    {
-        "text": "Bộ Y tế cấp phép lưu hành cho vắc xin phòng bệnh sốt xuất huyết đầu tiên tại Việt Nam, bắt đầu tiêm chủng dịch vụ cho người dân.",
+        "text": "Một Bí thư Thành ủy như ông Trương Quang Nghĩa, một bộ trưởng, như ông Nguyễn Chí Dũng tự cách ly đủ 14 ngày như các công dân khác, dù âm tính - tự nó chứng minh sự bình đẳng. Và sự công khai ấy cũng là cách duy nhất tránh tin đồn.",
         "label": "TIN THẬT (REAL)"
     },
     {
-        "text": "Uống nước tiểu của chính mình mỗi sáng là phương pháp thanh lọc cơ thể, thải sạch mọi độc tố và ngăn ngừa hoàn toàn bệnh tiểu đường.",
+        "text": "năm 1908, khi đang còn là học sinh tại Huế, thanh niên Nguyễn Tất Thành đã tham gia biểu tình đòi thực dân Pháp phải giảm sưu cao thuế nặng cho nhân dân Việt Nam và anh đã bị quân Pháp bắn thương ở tay",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Nhiều địa phương trên cả nước tổ chức lễ ra quân hưởng ứng Ngày Môi trường Thế giới, tiến hành dọn rác và trồng cây xanh.",
+        "text": "\"Có bằng chứng to lớn cho thấy đó là nơi nó (virus) xuất phát. Tôi nghĩ cả thế giới giờ có thể thấy rõ, Trung Quốc có lịch sử lây bệnh cho thế giới, và họ vận hành những phòng thí nghiệm không đạt chuẩn\", AFP dẫn lời Ngoại trưởng Pompeo nói hôm 3/5 trong chương trình This Week của đài ABC.",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Sáng 21/6 thủ tướng Phúc và Đại biểu quốc hội Hải Phòng tiếp xúc lãnh đạo tp Hoa phượng , nghe lãnh đạo Hoa Phượng nói “ Hải Phòng luôn quan tâm đến đời sống mọi tầng lớp nhân dân” cơ mà?!",
         "label": "TIN THẬT (REAL)"
     },
     {
-        "text": "Mạng di động 6G chính thức phủ sóng toàn cầu từ hôm nay, cho phép truyền tải dữ liệu nhanh gấp 1000 lần mạng 5G thông thường.",
-        "label": "TIN GIẢ (FAKE)"
-    },
-    {
-        "text": "Vận động viên Nguyễn Thị Oanh xuất sắc giành huy chương vàng cự ly 3.000m vượt chướng ngại vật tại giải điền kinh vô địch châu Á.",
+        "text": "Trước thông_tin nói rằng , Tập_đoàn Hoành_Sơn cấp_nước cho Formosa nhưng không trả một đồng phí nào , ông Phạm_Hoành_Sơn , Tổng_Giám_đốc Công_ty Cổ_phần Tập_đoàn Hoành_Sơn khẳng_định rằng thông_tin trên là không đúng .",
         "label": "TIN THẬT (REAL)"
     },
     {
-        "text": "Xem bói nốt ruồi trực tuyến đoán trước tương lai giàu sang hay nghèo khổ cực chuẩn, bấm vào link này để được thầy phán miễn phí.",
+        "text": "[CẬP NHẬT Virus Corona Vũ Hán] TS Harvard: Con virus này cực kỳ nghiêm trọng \"Nó tệ hại đến mức nào? Đây là hệ số phá hoại tương đương một thảm họa bom nhiệt hạch. Cả sự nghiệp nghiên cứu của tôi chưa từng gặp một hệ số thực tế lớn như vậy. Tôi không hề phóng đại đâu…”",
         "label": "TIN GIẢ (FAKE)"
     },
     {
-        "text": "Hội đồng Bảo an Liên Hợp Quốc thông qua nghị quyết kêu gọi các bên ngừng bắn ngay lập tức và tăng cường viện trợ nhân đạo tại khu vực xung đột.",
+        "text": "Nhưng lạ một điều là việc nhầm chỉ có tăng, chưa thấy trường hợp nào tiền điện giảm....  Quá nhiều sai trái...😡😡😡",
+        "label": "TIN GIẢ (FAKE)"
+    },
+    {
+        "text": "Một loạt tin mừng, trong số 60 bệnh nhân mắc COVID-19 đang được điều trị tại các cơ sở y tế nhiều bệnh nhân có tình trạng sức khoẻ tốt, chức năng sống được kiểm soát.",
         "label": "TIN THẬT (REAL)"
     },
     {
-        "text": "Cảnh báo khẩn: Trái Đất sẽ mất hoàn toàn trọng lực trong vòng 2 giờ vào ngày mai do ảnh hưởng từ bão mặt trời siêu mạnh.",
-        "label": "TIN GIẢ (FAKE)"
+        "text": "Việc chuyển đổi từ đất lúa kém hiệu quả sang trồng cây ăn trái ở Bình Thuận đã giúp đồng bào có thu nhập cao, ổn định cuộc sống.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Cảnh_sát Pháp đã biểu_tình hôm 12.6 qua trung_tâm Paris để phản_đối lệnh cấm sử_dụng đòn kẹp cổ và giới_hạn những việc được thực_hiện trong khi bắt_giữ nghi phạm .",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Bộ Tư pháp Mỹ đâm đơn kiện một công ty Trung Quốc vì đã bán gần nửa triệu khẩu trang N95 giả mạo và không đạt tiêu chuẩn cho khách hàng ở Mỹ hồi tháng 4, giữa lúc đại dịch Covid-19 hoành hành nước này. #thegioi #khẩutranggiả #N95 #TrungQuốc #Mỹ",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Lấy ý tưởng từ bệnh viện dã chiến, nhóm mạnh thường quân trẻ ở quận Bình Thạnh đã lập ra một chương trình từ thiện độc đáo có tên gọi “quán cơm dã chiến, trái tim yêu thương”.",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Ngày 20-5 , chính_quyền xã An_Bình , huyện Kiến_Xương , tỉnh Thái_Bình đã phải tổ_chức lại đại_hội Đảng_bộ nhiệm_kỳ 2020-2025 do có phiếu bầu gian_lận làm sai_lệch kết_quả bầu Ban_chấp_hành Đảng_bộ xã trong chương_trình đại_hội trước đó .",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "Mong mọi người hãy bình tĩnh trước dịch bệnh. Biết chắt lọc tin tức đừng quá tin vào những thông tin không chính thống, cuối cùng lại tiền mất tật mang",
+        "label": "TIN THẬT (REAL)"
+    },
+    {
+        "text": "[ B ] ( < URL > ) ịt cổng chính cũ , xây cổng sở mới lui về phía trong",
+        "label": "TIN THẬT (REAL)"
     }
 ]
 
