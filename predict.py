@@ -70,6 +70,8 @@ def main():
     parser.add_argument("--text", type=str, help="Single Vietnamese text to analyze. If not provided, the script runs in interactive mode.")
     parser.add_argument("--lstm_path", type=str, default="models/best_lstm.pt", help="Path to best_lstm.pt")
     parser.add_argument("--trans_path", type=str, default="models/best_transformer.pt", help="Path to best_transformer.pt")
+    parser.add_argument("--lstm_threshold", type=float, default=0.63, help="Decision threshold for LSTM (default 0.63)")
+    parser.add_argument("--trans_threshold", type=float, default=0.50, help="Decision threshold for Transformer (default 0.50)")
     
     args = parser.parse_args()
     
@@ -171,9 +173,9 @@ def main():
                     prob_fake = probs[1].item()
                     prob_real = probs[0].item()
                     
-                label_str = f"{RED}{BOLD}TIN GIẢ (FAKE NEWS){RESET}" if prob_fake >= 0.5 else f"{GREEN}{BOLD}TIN THẬT (REAL NEWS){RESET}"
-                confidence = prob_fake if prob_fake >= 0.5 else prob_real
-                print(f"{BOLD}[BiLSTM Model]:{RESET} {label_str} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+                label_str = f"{RED}{BOLD}TIN GIẢ (FAKE NEWS){RESET}" if prob_fake >= args.lstm_threshold else f"{GREEN}{BOLD}TIN THẬT (REAL NEWS){RESET}"
+                confidence = prob_fake if prob_fake >= args.lstm_threshold else prob_real
+                print(f"{BOLD}[BiLSTM Model]:{RESET} {label_str} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%, Ngưỡng: {args.lstm_threshold})")
             except Exception as e:
                 print(f"[BiLSTM Model]: Lỗi dự đoán - {e}")
                 
@@ -190,9 +192,9 @@ def main():
                     prob_fake = probs[1].item()
                     prob_real = probs[0].item()
                     
-                label_str = f"{RED}{BOLD}TIN GIẢ (FAKE NEWS){RESET}" if prob_fake >= 0.5 else f"{GREEN}{BOLD}TIN THẬT (REAL NEWS){RESET}"
-                confidence = prob_fake if prob_fake >= 0.5 else prob_real
-                print(f"{BOLD}[Transformer]:{RESET}    {label_str} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+                label_str = f"{RED}{BOLD}TIN GIẢ (FAKE NEWS){RESET}" if prob_fake >= args.trans_threshold else f"{GREEN}{BOLD}TIN THẬT (REAL NEWS){RESET}"
+                confidence = prob_fake if prob_fake >= args.trans_threshold else prob_real
+                print(f"{BOLD}[Transformer]:{RESET}    {label_str} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%, Ngưỡng: {args.trans_threshold})")
             except Exception as e:
                 print(f"[Transformer]: Lỗi dự đoán - {e}")
         print("="*60 + "\n")

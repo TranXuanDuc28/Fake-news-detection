@@ -210,9 +210,17 @@ else:
     trans_exists = False
 
 # Environment Check
+lstm_threshold = 0.50
+trans_threshold = 0.50
 if lstm_exists or trans_exists:
     st.sidebar.success("✅ Trọng số mô hình đã sẵn sàng!")
     mode = st.sidebar.selectbox("Chế độ Dự đoán", ["Sử dụng Mô hình AI thực tế (Loaded weights)", "Chế độ Heuristic (Từ khóa)"])
+    if mode == "Sử dụng Mô hình AI thực tế (Loaded weights)":
+        st.sidebar.markdown("### 🎛️ Ngưỡng quyết định (Threshold)")
+        if lstm_exists:
+            lstm_threshold = st.sidebar.slider("Ngưỡng BiLSTM (Fake News)", min_value=0.1, max_value=0.9, value=0.63, step=0.01, help="Ngưỡng tối ưu khuyên dùng cho LSTM là 0.63")
+        if trans_exists:
+            trans_threshold = st.sidebar.slider("Ngưỡng Transformer (Fake News)", min_value=0.1, max_value=0.9, value=0.50, step=0.01, help="Ngưỡng mặc định là 0.50")
 else:
     st.sidebar.warning("⚠️ Chưa phát hiện trọng số mô hình.")
     st.sidebar.info("Ứng dụng tự động chạy ở chế độ **Demo Heuristic** (phát hiện theo cụm từ giật gân). Để chạy mô hình thực tế, hãy huấn luyện trên Colab và tải file `.pt` vào thư mục `models/`.")
@@ -387,23 +395,23 @@ with tab1:
             if mode != "Chế độ Heuristic (Từ khóa)" and "models" in locals() and "transformer_name" in models:
                 trans_label = f"Transformer ({models['transformer_name'].split('/')[-1]})"
             st.markdown(f"#### Mô hình {trans_label}")
-            if prob_fake_trans >= 0.5:
-                st.markdown("<span class='badge badge-fake'>Fake News (Tin Giả)</span>", unsafe_allow_html=True)
+            if prob_fake_trans >= trans_threshold:
+                st.markdown(f"<span class='badge badge-fake'>Fake News (Tin Giả)</span> <span style='font-size:0.8rem;color:#777;'>(Ngưỡng: {trans_threshold})</span>", unsafe_allow_html=True)
                 st.write(f"Độ tin cậy tin giả: **{prob_fake_trans * 100:.2f}%**")
                 st.progress(prob_fake_trans)
             else:
-                st.markdown("<span class='badge badge-real'>Real News (Tin Thật)</span>", unsafe_allow_html=True)
+                st.markdown(f"<span class='badge badge-real'>Real News (Tin Thật)</span> <span style='font-size:0.8rem;color:#777;'>(Ngưỡng: {trans_threshold})</span>", unsafe_allow_html=True)
                 st.write(f"Độ tin cậy tin thật: **{(1 - prob_fake_trans) * 100:.2f}%**")
                 st.progress(prob_fake_trans)
                 
             st.markdown("---")
             st.markdown("#### Mô hình BiLSTM")
-            if prob_fake_lstm >= 0.5:
-                st.markdown("<span class='badge badge-fake'>Fake News (Tin Giả)</span>", unsafe_allow_html=True)
+            if prob_fake_lstm >= lstm_threshold:
+                st.markdown(f"<span class='badge badge-fake'>Fake News (Tin Giả)</span> <span style='font-size:0.8rem;color:#777;'>(Ngưỡng: {lstm_threshold})</span>", unsafe_allow_html=True)
                 st.write(f"Độ tin cậy tin giả: **{prob_fake_lstm * 100:.2f}%**")
                 st.progress(prob_fake_lstm)
             else:
-                st.markdown("<span class='badge badge-real'>Real News (Tin Thật)</span>", unsafe_allow_html=True)
+                st.markdown(f"<span class='badge badge-real'>Real News (Tin Thật)</span> <span style='font-size:0.8rem;color:#777;'>(Ngưỡng: {lstm_threshold})</span>", unsafe_allow_html=True)
                 st.write(f"Độ tin cậy tin thật: **{(1 - prob_fake_lstm) * 100:.2f}%**")
                 st.progress(prob_fake_lstm)
                 
