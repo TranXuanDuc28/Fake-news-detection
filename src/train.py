@@ -199,10 +199,10 @@ def load_pretrained_embeddings(vocab_w2i, segment_words=False, data_dir="data", 
                                         print("--> Mirror download completed via curl!")
                                     except Exception as hf_curl_err:
                                         print(f"--> Mirror download failed: {hf_curl_err}")
-                                        return None
+                                        pass
                             else:
                                 print("--> No word-level mirror available. Fallback failed.")
-                                return None
+                                pass
         else:
             # Facebook FastText (Direct .vec download)
             try:
