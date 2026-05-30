@@ -126,26 +126,31 @@ class TransformerDataset(Dataset):
         return item
 
 
-def load_raw_data(data_dir="data", segment_words=False):
+def load_raw_data(data_dir="data", segment_words=False, use_additional=True):
     """Loads train, val, and test dataframes, handles missing values, checks for additional datasets, and applies text cleaning."""
     train_df = pd.read_csv(os.path.join(data_dir, "train.csv"))
     val_df = pd.read_csv(os.path.join(data_dir, "val.csv"))
     test_df = pd.read_csv(os.path.join(data_dir, "test.csv"))
     
     # Tự động phát hiện và gộp bộ dữ liệu bổ sung nếu có
-    additional_path = os.path.join(data_dir, "additional_train.csv")
-    if os.path.exists(additional_path):
-        print(f"--> Phát hiện bộ dữ liệu bổ sung: {additional_path}. Tiến hành gộp dữ liệu...")
-        try:
-            additional_df = pd.read_csv(additional_path)
-            if "post_message" in additional_df.columns and "label" in additional_df.columns:
-                additional_df = additional_df[["post_message", "label"]]
-                train_df = pd.concat([train_df, additional_df], ignore_index=True)
-                print(f"--> Gộp dữ liệu thành công! Kích thước tập Train sau gộp: {len(train_df)} dòng.")
-            else:
-                print("--> Cảnh báo: Tệp additional_train.csv thiếu cột 'post_message' hoặc 'label'. Bỏ qua gộp.")
-        except Exception as e:
-            print(f"--> Lỗi đọc tệp additional_train.csv: {e}. Bỏ qua gộp.")
+    if use_additional:
+        additional_path = os.path.join(data_dir, "additional_train.csv")
+        if os.path.exists(additional_path):
+            print(f"--> Phát hiện bộ dữ liệu bổ sung: {additional_path}. Tiến hành gộp dữ liệu...")
+            try:
+                additional_df = pd.read_csv(additional_path)
+                if "post_message" in additional_df.columns and "label" in additional_df.columns:
+                    additional_df = additional_df[["post_message", "label"]]
+                    train_df = pd.concat([train_df, additional_df], ignore_index=True)
+                    print(f"--> Gộp dữ liệu thành công! Kích thước tập Train sau gộp: {len(train_df)} dòng.")
+                else:
+                    print("--> Cảnh báo: Tệp additional_train.csv thiếu cột 'post_message' hoặc 'label'. Bỏ qua gộp.")
+            except Exception as e:
+                print(f"--> Lỗi đọc tệp additional_train.csv: {e}. Bỏ qua gộp.")
+        else:
+            print("--> Không tìm thấy tệp additional_train.csv để gộp.")
+    else:
+        print("--> Không sử dụng bộ dữ liệu bổ sung (additional_train.csv) theo cấu hình.")
 
     # Fill NaN post messages with empty string
     train_df["post_message"] = train_df["post_message"].fillna("")
@@ -161,11 +166,11 @@ def load_raw_data(data_dir="data", segment_words=False):
 
 
 
-def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=128, subset_size=None, tokenizer_name="distilbert-base-multilingual-cased", oversample=False, segment_words=None):
+def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=128, subset_size=None, tokenizer_name="distilbert-base-multilingual-cased", oversample=False, segment_words=None, use_additional=True):
     """Creates PyTorch dataloaders for the specified model type with optional oversampling."""
     if segment_words is None:
         segment_words = ("phobert" in tokenizer_name.lower())
-    train_df, val_df, test_df = load_raw_data(data_dir, segment_words=segment_words)
+    train_df, val_df, test_df = load_raw_data(data_dir, segment_words=segment_words, use_additional=use_additional)
     
     # Optional sub-sampling for faster hyperparameter search
     if subset_size is not None:
