@@ -1,8 +1,0 @@
-{
-    "loss": 0.1936,
-    "accuracy": 0.9630,
-    "precision_binary": 0.8721,
-    "recall_binary": 0.9146,
-    "f1_binary": 0.8929,
-    "f1_macro": 0.9352
-}

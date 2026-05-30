@@ -18,7 +18,7 @@ sys.path.append(os.path.join(BASE_DIR, "app"))
 
 # Word segmentation helper
 try:
-    from pyvi import ViTokenizer
+    from pyvi import ViTokenizer, ViPosTagger
     HAS_PYVI = True
 except ImportError:
     HAS_PYVI = False
@@ -63,10 +63,49 @@ class VocabHelper:
 
 def get_lstm_token_attribution(model, vocab_helper, text, segment_words, pred_class, orig_prob, device):
     cleaned_text = clean_vietnamese_text(text, segment_words=True)
-    words = cleaned_text.split()
-    compound_words = list(dict.fromkeys([w for w in words if "_" in w]))
+    words = []
+    tags = []
+    if HAS_PYVI:
+        try:
+            tokens, tags_list = ViPosTagger.postagging(cleaned_text)
+            words = tokens
+            tags = tags_list
+        except Exception as ex:
+            print(f"LSTM POS Tagging failed: {ex}")
+            words = cleaned_text.split()
+            tags = ["N"] * len(words)
+    else:
+        words = cleaned_text.split()
+        tags = ["N"] * len(words)
+        
+    allowed_tags = {"N", "V", "A", "R", "Ny", "X"}
     
-    if not compound_words:
+    # Identify valid unigram indices
+    valid_unigram_indices = []
+    for idx, (w, tag) in enumerate(zip(words, tags)):
+        clean_w = w.replace("_", "").lower()
+        if tag in allowed_tags and clean_w.isalnum() and len(clean_w) > 1:
+            valid_unigram_indices.append(idx)
+            
+    # Generate candidates
+    candidates = []
+    # Add unigrams
+    for idx in valid_unigram_indices:
+        candidates.append({
+            "type": "unigram",
+            "indices": [idx],
+            "text": words[idx]
+        })
+    # Add bigrams of adjacent valid content words
+    for idx in range(len(words) - 1):
+        if idx in valid_unigram_indices and (idx + 1) in valid_unigram_indices:
+            candidates.append({
+                "type": "bigram",
+                "indices": [idx, idx+1],
+                "text": f"{words[idx]}_{words[idx+1]}"
+            })
+            
+    if not candidates:
         return []
         
     word2idx = vocab_helper.word2idx
@@ -75,11 +114,12 @@ def get_lstm_token_attribution(model, vocab_helper, text, segment_words, pred_cl
     max_len = 128
     
     batch_list = []
-    for cw in compound_words:
-        # Keep word position by replacing target word with "<pad>"
-        mutated_words = [w if w != cw else "<pad>" for w in words]
+    for cand in candidates:
+        mutated_words = list(words)
+        for idx in cand["indices"]:
+            mutated_words[idx] = "<pad>"
+            
         idxs = [pad_idx if tok == "<pad>" else word2idx.get(tok, unk_idx) for tok in mutated_words]
-        
         if len(idxs) < max_len:
             idxs = idxs + [pad_idx] * (max_len - len(idxs))
         else:
@@ -96,32 +136,90 @@ def get_lstm_token_attribution(model, vocab_helper, text, segment_words, pred_cl
         probs = torch.softmax(logits, dim=1)
         mutated_probs = probs[:, pred_class].cpu().numpy()
         
-    attributions = []
-    for i, cw in enumerate(compound_words):
+    # Calculate candidate attributions
+    scored_candidates = []
+    for i, cand in enumerate(candidates):
         score = orig_prob - mutated_probs[i]
-        attributions.append({
-            "word": cw.replace("_", " "),
-            "score": float(score)
+        scored_candidates.append({
+            "text": cand["text"].replace("_", " "),
+            "score": float(score),
+            "indices": cand["indices"]
         })
         
-    attributions.sort(key=lambda x: x["score"], reverse=True)
-    return attributions
+    # Sort candidates by score descending
+    scored_candidates.sort(key=lambda x: x["score"], reverse=True)
+    
+    # Non-Maximum Suppression (NMS) to prevent overlapping words (e.g. "bay", "màu" and "bay màu")
+    selected_candidates = []
+    covered_indices = set()
+    for cand in scored_candidates:
+        if any(idx in covered_indices for idx in cand["indices"]):
+            continue
+        if cand["score"] > 0.0:
+            selected_candidates.append({
+                "word": cand["text"],
+                "score": cand["score"]
+            })
+            for idx in cand["indices"]:
+                covered_indices.add(idx)
+                
+    return selected_candidates
 
 def get_trans_token_attribution(model, tokenizer, text, segment_words, pred_class, orig_prob, device):
     cleaned_text = clean_vietnamese_text(text, segment_words=True)
-    words = cleaned_text.split()
-    compound_words = list(dict.fromkeys([w for w in words if "_" in w]))
+    words = []
+    tags = []
+    if HAS_PYVI:
+        try:
+            tokens, tags_list = ViPosTagger.postagging(cleaned_text)
+            words = tokens
+            tags = tags_list
+        except Exception as ex:
+            print(f"Transformer POS Tagging failed: {ex}")
+            words = cleaned_text.split()
+            tags = ["N"] * len(words)
+    else:
+        words = cleaned_text.split()
+        tags = ["N"] * len(words)
+        
+    allowed_tags = {"N", "V", "A", "R", "Ny", "X"}
     
-    if not compound_words:
+    # Identify valid unigram indices
+    valid_unigram_indices = []
+    for idx, (w, tag) in enumerate(zip(words, tags)):
+        clean_w = w.replace("_", "").lower()
+        if tag in allowed_tags and clean_w.isalnum() and len(clean_w) > 1:
+            valid_unigram_indices.append(idx)
+            
+    # Generate candidates
+    candidates = []
+    # Add unigrams
+    for idx in valid_unigram_indices:
+        candidates.append({
+            "type": "unigram",
+            "indices": [idx],
+            "text": words[idx]
+        })
+    # Add bigrams of adjacent valid content words
+    for idx in range(len(words) - 1):
+        if idx in valid_unigram_indices and (idx + 1) in valid_unigram_indices:
+            candidates.append({
+                "type": "bigram",
+                "indices": [idx, idx+1],
+                "text": f"{words[idx]}_{words[idx+1]}"
+            })
+            
+    if not candidates:
         return []
         
     batch_input_ids = []
     batch_attention_mask = []
     
     pad_token = tokenizer.pad_token if tokenizer.pad_token else "<pad>"
-    for cw in compound_words:
-        # Keep word position by replacing target word with tokenizer pad token
-        mutated_words = [w if w != cw else pad_token for w in words]
+    for cand in candidates:
+        mutated_words = list(words)
+        for idx in cand["indices"]:
+            mutated_words[idx] = pad_token
         mutated_text = " ".join(mutated_words)
         
         inputs = tokenizer(mutated_text, return_tensors="pt", max_length=128, padding="max_length", truncation=True)
@@ -139,16 +237,34 @@ def get_trans_token_attribution(model, tokenizer, text, segment_words, pred_clas
         probs = torch.softmax(logits, dim=1)
         mutated_probs = probs[:, pred_class].cpu().numpy()
         
-    attributions = []
-    for i, cw in enumerate(compound_words):
+    # Calculate candidate attributions
+    scored_candidates = []
+    for i, cand in enumerate(candidates):
         score = orig_prob - mutated_probs[i]
-        attributions.append({
-            "word": cw.replace("_", " "),
-            "score": float(score)
+        scored_candidates.append({
+            "text": cand["text"].replace("_", " "),
+            "score": float(score),
+            "indices": cand["indices"]
         })
         
-    attributions.sort(key=lambda x: x["score"], reverse=True)
-    return attributions
+    # Sort candidates by score descending
+    scored_candidates.sort(key=lambda x: x["score"], reverse=True)
+    
+    # Non-Maximum Suppression (NMS) to prevent overlapping words (e.g. "bay", "màu" and "bay màu")
+    selected_candidates = []
+    covered_indices = set()
+    for cand in scored_candidates:
+        if any(idx in covered_indices for idx in cand["indices"]):
+            continue
+        if cand["score"] > 0.0:
+            selected_candidates.append({
+                "word": cand["text"],
+                "score": cand["score"]
+            })
+            for idx in cand["indices"]:
+                covered_indices.add(idx)
+                
+    return selected_candidates
 
 app = FastAPI(title="Vietnamese Fake News Detection System", version="1.0.0")
 
@@ -266,7 +382,7 @@ async def predict_news(req: PredictionRequest):
                 attributions = get_lstm_token_attribution(
                     lstm_model, lstm_vocab, req.text, lstm_segment, pred_class, orig_prob, device
                 )
-                keywords = [attr for attr in attributions if attr["score"] > 0.0]
+                keywords = [attr for attr in attributions if attr["score"] > 0.0][:8]
             except Exception as ex:
                 print(f"Error computing BiLSTM attributions: {ex}")
                 
@@ -318,7 +434,7 @@ async def predict_news(req: PredictionRequest):
                 attributions = get_trans_token_attribution(
                     trans_model, trans_tokenizer, req.text, trans_segment, pred_class, orig_prob, device
                 )
-                keywords = [attr for attr in attributions if attr["score"] > 0.0]
+                keywords = [attr for attr in attributions if attr["score"] > 0.0][:8]
             except Exception as ex:
                 print(f"Error computing Transformer attributions: {ex}")
                 

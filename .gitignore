@@ -11,6 +11,9 @@ env/
 
 # Model checkpoints (they should be loaded from Google Drive or trained on Colab)
 models/*.pt
+models_old/*.pt
+*.pt
+*.pth
 
 # User-specific or system files
 .DS_Store
