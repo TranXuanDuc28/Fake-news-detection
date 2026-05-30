@@ -363,6 +363,12 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"\n--- Training {model_type.upper()} model on device: {device} ---")
     
+    # Enforce mutual exclusivity of Oversampling and Class Weights
+    if oversample and use_class_weights:
+        print("--> WARNING: Both Oversample and UseClassWeights were set to True.")
+        print("    To prevent double-favoring the minority class, UseClassWeights has been set to False.")
+        use_class_weights = False
+        
     # Enforce embedding_dim if use_pretrained_emb is active
     if model_type == "lstm" and use_pretrained_emb:
         if embedding_dim not in [100, 300]:
