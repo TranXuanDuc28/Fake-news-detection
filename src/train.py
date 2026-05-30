@@ -13,7 +13,7 @@ import json
 import torch
 import torch.nn as nn
 import numpy as np
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from src.data_loader import get_dataloaders
 from src.lstm_model import BiLSTMClassifier
