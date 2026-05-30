@@ -12,20 +12,26 @@ import json
 import torch
 import torch.nn as nn
 from src.data_loader import get_dataloaders
-from src.lstm_model import BiLSTMClassifier
+from src.lstm_model import BiLSTMClassifier, LSTMClassifier
 from src.transformer_model import TransformerClassifier
 from src.train import train_model
 
 
-def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tuning_results.json", epochs=3, subset_size=None, oversample=True, use_class_weights=False, additional_dataset="none"):
+def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tuning_results.json", epochs=3, subset_size=None, oversample=True, use_class_weights=False, additional_dataset="none", model_type="all"):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     is_gpu = torch.cuda.is_available()
     
     # We will use the entire dataset for tuning unless a subset_size is explicitly provided.
     
+    # Load existing results if file exists to prevent overwriting results of other models
     results = {
         "lstm": {
+            "dropout_sweep": {},
+            "batch_size_sweep": {},
+            "lr_sweep": {}
+        },
+        "lstm_1d": {
             "dropout_sweep": {},
             "batch_size_sweep": {},
             "lr_sweep": {}
@@ -37,11 +43,25 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
         }
     }
     
+    if os.path.exists(output_path):
+        try:
+            with open(output_path, "r", encoding="utf-8") as f:
+                existing_results = json.load(f)
+                for key in results:
+                    if key in existing_results:
+                        results[key] = existing_results[key]
+        except Exception as e:
+            print(f"--> WARNING: Failed to load existing tuning results: {e}. Starting fresh.")
+
     # Defaults
     default_lstm_lr = 1e-3
     default_lstm_dropout = 0.3
     default_lstm_batch = 16
     
+    default_lstm_1d_lr = 1e-3
+    default_lstm_1d_dropout = 0.3
+    default_lstm_1d_batch = 16
+
     # If using GPU, we fine-tune the entire transformer. If CPU, we freeze the backbone.
     freeze_backbone = not is_gpu
     default_trans_lr = 2e-5 if is_gpu else 2e-3
@@ -54,117 +74,175 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
     print(f"Tuning Subset Size: {subset_size if subset_size is not None else 'Full Dataset'} | Epochs per run: {epochs}")
     print(f"Saving checkpoints to: {save_dir}")
     print(f"Loading data from: {data_dir} | Additional Dataset: {additional_dataset}")
+    print(f"Target Model: {model_type.upper()}")
     print("="*50)
     
     # ------------------ LSTM SWEEPS ------------------
-    print("\n>>> Tuning LSTM Model...")
-    
-    # 1. LSTM Dropout Sweep (0.1, 0.3, 0.5)
-    for dp in [0.1, 0.3, 0.5]:
-        print(f"\n[LSTM Sweep] Testing Dropout = {dp}")
-        run_save_dir = os.path.join(save_dir, f"lstm_lr{default_lstm_lr}_bs{default_lstm_batch}_dp{dp}")
-        history, test_m = train_model(
-            model_type="lstm", epochs=epochs, batch_size=default_lstm_batch,
-            lr=default_lstm_lr, dropout=dp, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir,
-            oversample=oversample, use_class_weights=use_class_weights,
-            additional_dataset=additional_dataset
-        )
-        results["lstm"]["dropout_sweep"][str(dp)] = {
-            "val_f1_history": history["val_f1"],
-            "val_loss_history": history["val_loss"],
-            "final_metrics": test_m
-        }
+    if model_type in ["all", "lstm"]:
+        print("\n>>> Tuning BiLSTM Model...")
         
-    # 2. LSTM Batch Size Sweep (8, 16, 32)
-    for bs in [8, 16, 32]:
-        print(f"\n[LSTM Sweep] Testing Batch Size = {bs}")
-        run_save_dir = os.path.join(save_dir, f"lstm_lr{default_lstm_lr}_bs{bs}_dp{default_lstm_dropout}")
-        history, test_m = train_model(
-            model_type="lstm", epochs=epochs, batch_size=bs,
-            lr=default_lstm_lr, dropout=default_lstm_dropout, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir,
-            oversample=oversample, use_class_weights=use_class_weights,
-            additional_dataset=additional_dataset
-        )
-        results["lstm"]["batch_size_sweep"][str(bs)] = {
-            "val_f1_history": history["val_f1"],
-            "val_loss_history": history["val_loss"],
-            "final_metrics": test_m
-        }
+        # 1. LSTM Dropout Sweep (0.1, 0.3, 0.5)
+        for dp in [0.1, 0.3, 0.5]:
+            print(f"\n[LSTM Sweep] Testing Dropout = {dp}")
+            run_save_dir = os.path.join(save_dir, f"lstm_lr{default_lstm_lr}_bs{default_lstm_batch}_dp{dp}")
+            history, test_m = train_model(
+                model_type="lstm", epochs=epochs, batch_size=default_lstm_batch,
+                lr=default_lstm_lr, dropout=dp, subset_size=subset_size,
+                save_dir=run_save_dir, data_dir=data_dir,
+                oversample=oversample, use_class_weights=use_class_weights,
+                additional_dataset=additional_dataset
+            )
+            results["lstm"]["dropout_sweep"][str(dp)] = {
+                "val_f1_history": history["val_f1"],
+                "val_loss_history": history["val_loss"],
+                "final_metrics": test_m
+            }
+            
+        # 2. LSTM Batch Size Sweep (8, 16, 32)
+        for bs in [8, 16, 32]:
+            print(f"\n[LSTM Sweep] Testing Batch Size = {bs}")
+            run_save_dir = os.path.join(save_dir, f"lstm_lr{default_lstm_lr}_bs{bs}_dp{default_lstm_dropout}")
+            history, test_m = train_model(
+                model_type="lstm", epochs=epochs, batch_size=bs,
+                lr=default_lstm_lr, dropout=default_lstm_dropout, subset_size=subset_size,
+                save_dir=run_save_dir, data_dir=data_dir,
+                oversample=oversample, use_class_weights=use_class_weights,
+                additional_dataset=additional_dataset
+            )
+            results["lstm"]["batch_size_sweep"][str(bs)] = {
+                "val_f1_history": history["val_f1"],
+                "val_loss_history": history["val_loss"],
+                "final_metrics": test_m
+            }
+            
+        # 3. LSTM Learning Rate Sweep (1e-4, 1e-3, 5e-3)
+        for lr in [1e-4, 1e-3, 5e-3]:
+            print(f"\n[LSTM Sweep] Testing Learning Rate = {lr}")
+            run_save_dir = os.path.join(save_dir, f"lstm_lr{lr}_bs{default_lstm_batch}_dp{default_lstm_dropout}")
+            history, test_m = train_model(
+                model_type="lstm", epochs=epochs, batch_size=default_lstm_batch,
+                lr=lr, dropout=default_lstm_dropout, subset_size=subset_size,
+                save_dir=run_save_dir, data_dir=data_dir,
+                oversample=oversample, use_class_weights=use_class_weights,
+                additional_dataset=additional_dataset
+            )
+            results["lstm"]["lr_sweep"][str(lr)] = {
+                "val_f1_history": history["val_f1"],
+                "val_loss_history": history["val_loss"],
+                "final_metrics": test_m
+            }
+
+    # ------------------ LSTM 1D SWEEPS ------------------
+    if model_type in ["all", "lstm_1d"]:
+        print("\n>>> Tuning LSTM 1D Model...")
         
-    # 3. LSTM Learning Rate Sweep (1e-4, 1e-3, 5e-3)
-    for lr in [1e-4, 1e-3, 5e-3]:
-        print(f"\n[LSTM Sweep] Testing Learning Rate = {lr}")
-        run_save_dir = os.path.join(save_dir, f"lstm_lr{lr}_bs{default_lstm_batch}_dp{default_lstm_dropout}")
-        history, test_m = train_model(
-            model_type="lstm", epochs=epochs, batch_size=default_lstm_batch,
-            lr=lr, dropout=default_lstm_dropout, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir,
-            oversample=oversample, use_class_weights=use_class_weights,
-            additional_dataset=additional_dataset
-        )
-        results["lstm"]["lr_sweep"][str(lr)] = {
-            "val_f1_history": history["val_f1"],
-            "val_loss_history": history["val_loss"],
-            "final_metrics": test_m
-        }
+        # 1. LSTM 1D Dropout Sweep (0.1, 0.3, 0.5)
+        for dp in [0.1, 0.3, 0.5]:
+            print(f"\n[LSTM 1D Sweep] Testing Dropout = {dp}")
+            run_save_dir = os.path.join(save_dir, f"lstm_1d_lr{default_lstm_1d_lr}_bs{default_lstm_1d_batch}_dp{dp}")
+            history, test_m = train_model(
+                model_type="lstm_1d", epochs=epochs, batch_size=default_lstm_1d_batch,
+                lr=default_lstm_1d_lr, dropout=dp, subset_size=subset_size,
+                save_dir=run_save_dir, data_dir=data_dir,
+                oversample=oversample, use_class_weights=use_class_weights,
+                additional_dataset=additional_dataset
+            )
+            results["lstm_1d"]["dropout_sweep"][str(dp)] = {
+                "val_f1_history": history["val_f1"],
+                "val_loss_history": history["val_loss"],
+                "final_metrics": test_m
+            }
+            
+        # 2. LSTM 1D Batch Size Sweep (8, 16, 32)
+        for bs in [8, 16, 32]:
+            print(f"\n[LSTM 1D Sweep] Testing Batch Size = {bs}")
+            run_save_dir = os.path.join(save_dir, f"lstm_1d_lr{default_lstm_1d_lr}_bs{bs}_dp{default_lstm_1d_dropout}")
+            history, test_m = train_model(
+                model_type="lstm_1d", epochs=epochs, batch_size=bs,
+                lr=default_lstm_1d_lr, dropout=default_lstm_1d_dropout, subset_size=subset_size,
+                save_dir=run_save_dir, data_dir=data_dir,
+                oversample=oversample, use_class_weights=use_class_weights,
+                additional_dataset=additional_dataset
+            )
+            results["lstm_1d"]["batch_size_sweep"][str(bs)] = {
+                "val_f1_history": history["val_f1"],
+                "val_loss_history": history["val_loss"],
+                "final_metrics": test_m
+            }
+            
+        # 3. LSTM 1D Learning Rate Sweep (1e-4, 1e-3, 5e-3)
+        for lr in [1e-4, 1e-3, 5e-3]:
+            print(f"\n[LSTM 1D Sweep] Testing Learning Rate = {lr}")
+            run_save_dir = os.path.join(save_dir, f"lstm_1d_lr{lr}_bs{default_lstm_1d_batch}_dp{default_lstm_1d_dropout}")
+            history, test_m = train_model(
+                model_type="lstm_1d", epochs=epochs, batch_size=default_lstm_1d_batch,
+                lr=lr, dropout=default_lstm_1d_dropout, subset_size=subset_size,
+                save_dir=run_save_dir, data_dir=data_dir,
+                oversample=oversample, use_class_weights=use_class_weights,
+                additional_dataset=additional_dataset
+            )
+            results["lstm_1d"]["lr_sweep"][str(lr)] = {
+                "val_f1_history": history["val_f1"],
+                "val_loss_history": history["val_loss"],
+                "final_metrics": test_m
+            }
         
     # ------------------ TRANSFORMER SWEEPS ------------------
-    print("\n>>> Tuning Transformer Model...")
-    
-    # 1. Transformer Dropout Sweep (0.1, 0.3, 0.5)
-    for dp in [0.1, 0.3, 0.5]:
-        print(f"\n[Transformer Sweep] Testing Dropout = {dp}")
-        run_save_dir = os.path.join(save_dir, f"transformer_lr{default_trans_lr}_bs{default_trans_batch}_dp{dp}")
-        history, test_m = train_model(
-            model_type="transformer", epochs=epochs, batch_size=default_trans_batch,
-            lr=default_trans_lr, dropout=dp, freeze_backbone=freeze_backbone, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir,
-            oversample=oversample, use_class_weights=use_class_weights,
-            additional_dataset=additional_dataset
-        )
-        results["transformer"]["dropout_sweep"][str(dp)] = {
-            "val_f1_history": history["val_f1"],
-            "val_loss_history": history["val_loss"],
-            "final_metrics": test_m
-        }
+    if model_type in ["all", "transformer"]:
+        print("\n>>> Tuning Transformer Model...")
         
-    # 2. Transformer Batch Size Sweep (8, 16, 32)
-    for bs in [8, 16, 32]:
-        print(f"\n[Transformer Sweep] Testing Batch Size = {bs}")
-        run_save_dir = os.path.join(save_dir, f"transformer_lr{default_trans_lr}_bs{bs}_dp{default_trans_dropout}")
-        history, test_m = train_model(
-            model_type="transformer", epochs=epochs, batch_size=bs,
-            lr=default_trans_lr, dropout=default_trans_dropout, freeze_backbone=freeze_backbone, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir,
-            oversample=oversample, use_class_weights=use_class_weights,
-            additional_dataset=additional_dataset
-        )
-        results["transformer"]["batch_size_sweep"][str(bs)] = {
-            "val_f1_history": history["val_f1"],
-            "val_loss_history": history["val_loss"],
-            "final_metrics": test_m
-        }
-        
-    # 3. Transformer Learning Rate Sweep
-    # If on GPU (unfrozen), search standard: [1e-5, 2e-5, 5e-5]. If on CPU (frozen), search: [1e-3, 2e-3, 5e-3]
-    lrs = [1e-5, 2e-5, 5e-5] if is_gpu else [1e-3, 2e-3, 5e-3]
-    for lr in lrs:
-        print(f"\n[Transformer Sweep] Testing Learning Rate = {lr}")
-        run_save_dir = os.path.join(save_dir, f"transformer_lr{lr}_bs{default_trans_batch}_dp{default_trans_dropout}")
-        history, test_m = train_model(
-            model_type="transformer", epochs=epochs, batch_size=default_trans_batch,
-            lr=lr, dropout=default_trans_dropout, freeze_backbone=freeze_backbone, subset_size=subset_size,
-            save_dir=run_save_dir, data_dir=data_dir,
-            oversample=oversample, use_class_weights=use_class_weights,
-            additional_dataset=additional_dataset
-        )
-        results["transformer"]["lr_sweep"][str(lr)] = {
-            "val_f1_history": history["val_f1"],
-            "val_loss_history": history["val_loss"],
-            "final_metrics": test_m
-        }
+        # 1. Transformer Dropout Sweep (0.1, 0.3, 0.5)
+        for dp in [0.1, 0.3, 0.5]:
+            print(f"\n[Transformer Sweep] Testing Dropout = {dp}")
+            run_save_dir = os.path.join(save_dir, f"transformer_lr{default_trans_lr}_bs{default_trans_batch}_dp{dp}")
+            history, test_m = train_model(
+                model_type="transformer", epochs=epochs, batch_size=default_trans_batch,
+                lr=default_trans_lr, dropout=dp, freeze_backbone=freeze_backbone, subset_size=subset_size,
+                save_dir=run_save_dir, data_dir=data_dir,
+                oversample=oversample, use_class_weights=use_class_weights,
+                additional_dataset=additional_dataset
+            )
+            results["transformer"]["dropout_sweep"][str(dp)] = {
+                "val_f1_history": history["val_f1"],
+                "val_loss_history": history["val_loss"],
+                "final_metrics": test_m
+            }
+            
+        # 2. Transformer Batch Size Sweep (8, 16, 32)
+        for bs in [8, 16, 32]:
+            print(f"\n[Transformer Sweep] Testing Batch Size = {bs}")
+            run_save_dir = os.path.join(save_dir, f"transformer_lr{default_trans_lr}_bs{bs}_dp{default_trans_dropout}")
+            history, test_m = train_model(
+                model_type="transformer", epochs=epochs, batch_size=bs,
+                lr=default_trans_lr, dropout=default_trans_dropout, freeze_backbone=freeze_backbone, subset_size=subset_size,
+                save_dir=run_save_dir, data_dir=data_dir,
+                oversample=oversample, use_class_weights=use_class_weights,
+                additional_dataset=additional_dataset
+            )
+            results["transformer"]["batch_size_sweep"][str(bs)] = {
+                "val_f1_history": history["val_f1"],
+                "val_loss_history": history["val_loss"],
+                "final_metrics": test_m
+            }
+            
+        # 3. Transformer Learning Rate Sweep
+        # If on GPU (unfrozen), search standard: [1e-5, 2e-5, 5e-5]. If on CPU (frozen), search: [1e-3, 2e-3, 5e-3]
+        lrs = [1e-5, 2e-5, 5e-5] if is_gpu else [1e-3, 2e-3, 5e-3]
+        for lr in lrs:
+            print(f"\n[Transformer Sweep] Testing Learning Rate = {lr}")
+            run_save_dir = os.path.join(save_dir, f"transformer_lr{lr}_bs{default_trans_batch}_dp{default_trans_dropout}")
+            history, test_m = train_model(
+                model_type="transformer", epochs=epochs, batch_size=default_trans_batch,
+                lr=lr, dropout=default_trans_dropout, freeze_backbone=freeze_backbone, subset_size=subset_size,
+                save_dir=run_save_dir, data_dir=data_dir,
+                oversample=oversample, use_class_weights=use_class_weights,
+                additional_dataset=additional_dataset
+            )
+            results["transformer"]["lr_sweep"][str(lr)] = {
+                "val_f1_history": history["val_f1"],
+                "val_loss_history": history["val_loss"],
+                "final_metrics": test_m
+            }
         
     # Save sweep results to JSON
     with open(output_path, "w", encoding="utf-8") as f:
@@ -177,6 +255,7 @@ def run_parameter_sweep(save_dir="models", data_dir="data", output_path="data/tu
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Run Hyperparameter Sweep for LSTM and Transformer models")
+    parser.add_argument("--model", type=str, default="all", choices=["all", "lstm", "lstm_1d", "transformer"], help="Model type to tune")
     parser.add_argument("--save_dir", type=str, default="models", help="Directory to save model checkpoints during tuning")
     parser.add_argument("--data_dir", type=str, default="data", help="Directory where dataset files are located")
     parser.add_argument("--output", type=str, default="data/tuning_results.json", help="Path to save tuning results JSON file")
@@ -189,6 +268,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     run_parameter_sweep(
+        model_type=args.model,
         save_dir=args.save_dir,
         data_dir=args.data_dir,
         output_path=args.output,
@@ -198,5 +278,3 @@ if __name__ == "__main__":
         use_class_weights=args.use_class_weights,
         additional_dataset=args.additional_dataset
     )
-
-

@@ -228,7 +228,7 @@ def get_dataloaders(data_dir="data", model_type="lstm", batch_size=16, max_len=1
             df_fake_oversampled = df_fake.sample(len(df_real), replace=True, random_state=42)
             train_df = pd.concat([df_real, df_fake_oversampled], ignore_index=True).reset_index(drop=True)
             
-    if model_type == "lstm":
+    if model_type in ["lstm", "lstm_1d"]:
         # Build vocabulary on training set
         vocab = Vocab()
         vocab.build_vocab(train_df["post_message"].values)
