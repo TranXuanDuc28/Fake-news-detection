@@ -62,10 +62,10 @@ class VocabHelper:
         return torch.tensor([idxs], dtype=torch.long)
 
 def get_lstm_token_attribution(model, vocab_helper, text, segment_words, pred_class, orig_prob, device):
-    cleaned_text = clean_vietnamese_text(text, segment_words=True)
+    cleaned_text = clean_vietnamese_text(text, segment_words=segment_words)
     words = []
     tags = []
-    if HAS_PYVI:
+    if HAS_PYVI and segment_words:
         try:
             tokens, tags_list = ViPosTagger.postagging(cleaned_text)
             words = tokens
@@ -166,10 +166,10 @@ def get_lstm_token_attribution(model, vocab_helper, text, segment_words, pred_cl
     return selected_candidates
 
 def get_trans_token_attribution(model, tokenizer, text, segment_words, pred_class, orig_prob, device):
-    cleaned_text = clean_vietnamese_text(text, segment_words=True)
+    cleaned_text = clean_vietnamese_text(text, segment_words=segment_words)
     words = []
     tags = []
-    if HAS_PYVI:
+    if HAS_PYVI and segment_words:
         try:
             tokens, tags_list = ViPosTagger.postagging(cleaned_text)
             words = tokens
