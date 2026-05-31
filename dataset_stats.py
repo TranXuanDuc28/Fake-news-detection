@@ -54,6 +54,9 @@ def generate_statistics(data_dir="data"):
             "Custom Crawled Train": "crawled_train.csv",
             "Custom Crawled Val": "crawled_val.csv",
             "Custom Crawled Test": "crawled_test.csv"
+        },
+        "5. BỘ TĂNG CƯỜNG DỮ LIỆU (EDA Augmented - Dùng cho tùy chọn 'legacy')": {
+            "EDA Train (additional_train.csv)": "additional_train.csv"
         }
     }
     
@@ -113,6 +116,11 @@ def generate_statistics(data_dir="data"):
         },
         "both (ReINTEL + VFND + TinGia)": {
             "train": ["ReINTEL Train", "VFND Train", "TinGia Train"],
+            "val": ["ReINTEL Val", "VFND Val", "TinGia Val"],
+            "test": ["ReINTEL Test", "VFND Test", "TinGia Test"]
+        },
+        "legacy (ReINTEL + EDA Augmented)": {
+            "train": ["ReINTEL Train", "EDA Train (additional_train.csv)"],
             "val": ["ReINTEL Val", "VFND Val", "TinGia Val"],
             "test": ["ReINTEL Test", "VFND Test", "TinGia Test"]
         }

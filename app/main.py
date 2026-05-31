@@ -274,6 +274,10 @@ lstm_model = None
 lstm_vocab = None
 lstm_segment = False
 
+lstm_1d_model = None
+lstm_1d_vocab = None
+lstm_1d_segment = False
+
 trans_model = None
 trans_tokenizer = None
 trans_name = None
@@ -283,9 +287,10 @@ trans_segment = False
 @app.on_event("startup")
 def startup_event():
     global lstm_model, lstm_vocab, lstm_segment
+    global lstm_1d_model, lstm_1d_vocab, lstm_1d_segment
     global trans_model, trans_tokenizer, trans_name, trans_segment
     
-    # 1. Load LSTM
+    # 1. Load LSTM (Bidirectional)
     lstm_path = os.path.join(BASE_DIR, "models", "best_lstm.pt")
     if os.path.exists(lstm_path):
         try:
@@ -314,6 +319,37 @@ def startup_event():
             print(f"Error loading BiLSTM model: {e}")
     else:
         print(f"BiLSTM model not found at {lstm_path}.")
+
+    # 1.b Load LSTM 1D (Unidirectional)
+    lstm_1d_path = os.path.join(BASE_DIR, "models", "best_lstm_1d.pt")
+    if os.path.exists(lstm_1d_path):
+        try:
+            print(f"Loading LSTM 1D model from {lstm_1d_path}...")
+            checkpoint = torch.load(lstm_1d_path, map_location=device)
+            vocab_w2i = checkpoint["vocab_word2idx"]
+            lstm_1d_vocab = VocabHelper(vocab_w2i)
+            
+            hyperparams = checkpoint.get("hyperparameters", {})
+            lstm_1d_segment = hyperparams.get("segment_words", False)
+            embedding_dim = hyperparams.get("embedding_dim", 128)
+            hidden_dim = hyperparams.get("hidden_dim", 128)
+            
+            from src.lstm_model import BiLSTMClassifier
+            lstm_1d_model = BiLSTMClassifier(
+                vocab_size=len(vocab_w2i),
+                embedding_dim=embedding_dim,
+                hidden_dim=hidden_dim,
+                dropout=hyperparams.get("dropout", 0.3),
+                bidirectional=False
+            )
+            lstm_1d_model.load_state_dict(checkpoint["model_state_dict"])
+            lstm_1d_model.to(device)
+            lstm_1d_model.eval()
+            print("Successfully loaded LSTM 1D model.")
+        except Exception as e:
+            print(f"Error loading LSTM 1D model: {e}")
+    else:
+        print(f"LSTM 1D model not found at {lstm_1d_path}.")
 
     # 2. Load Transformer
     trans_path = os.path.join(BASE_DIR, "models", "best_transformer_phobert.pt")
@@ -348,6 +384,7 @@ def startup_event():
 class PredictionRequest(BaseModel):
     text: str
     lstm_threshold: float = 0.63
+    lstm_1d_threshold: float = 0.58
     trans_threshold: float = 0.50
 
 class CrawlRequest(BaseModel):
@@ -406,6 +443,54 @@ async def predict_news(req: PredictionRequest):
         results["lstm"] = {
             "success": False,
             "error": "Mô hình BiLSTM chưa được tải."
+        }
+        
+    # Run prediction for LSTM 1D
+    if lstm_1d_model is not None:
+        try:
+            t0 = time.time()
+            inputs = lstm_1d_vocab.encode(req.text, max_len=128, segment_words=lstm_1d_segment).to(device)
+            with torch.no_grad():
+                logits = lstm_1d_model(inputs)
+                probs = torch.softmax(logits, dim=1).squeeze(0)
+                prob_fake = probs[1].item()
+                prob_real = probs[0].item()
+            latency = (time.time() - t0) * 1000  # ms
+            
+            is_fake = prob_fake >= req.lstm_1d_threshold
+            
+            # Explainability
+            keywords = []
+            try:
+                pred_class = 1 if is_fake else 0
+                orig_prob = prob_fake if is_fake else prob_real
+                attributions = get_lstm_token_attribution(
+                    lstm_1d_model, lstm_1d_vocab, req.text, lstm_1d_segment, pred_class, orig_prob, device
+                )
+                keywords = [attr for attr in attributions if attr["score"] > 0.0][:8]
+            except Exception as ex:
+                print(f"Error computing LSTM 1D attributions: {ex}")
+                
+            results["lstm_1d"] = {
+                "success": True,
+                "label": "TIN GIẢ (FAKE NEWS)" if is_fake else "TIN THẬT (REAL NEWS)",
+                "is_fake": is_fake,
+                "prob_fake": prob_fake,
+                "prob_real": prob_real,
+                "threshold": req.lstm_1d_threshold,
+                "latency_ms": latency,
+                "segment_words": lstm_1d_segment,
+                "keywords": keywords
+            }
+        except Exception as e:
+            results["lstm_1d"] = {
+                "success": False,
+                "error": str(e)
+            }
+    else:
+        results["lstm_1d"] = {
+            "success": False,
+            "error": "Mô hình LSTM 1 chiều chưa được tải."
         }
         
     # Run prediction for Transformer
@@ -553,6 +638,16 @@ async def get_metrics():
         except Exception:
             pass
             
+    # Load LSTM 1D metrics
+    lstm_1d_metrics = {}
+    lstm_1d_res_path = os.path.join(BASE_DIR, "models", "test_lstm_1d_results.json")
+    if os.path.exists(lstm_1d_res_path):
+        try:
+            with open(lstm_1d_res_path) as f:
+                lstm_1d_metrics = json.load(f)
+        except Exception:
+            pass
+
     # Load Transformer metrics
     trans_metrics = {}
     trans_res_path = os.path.join(BASE_DIR, "models", "test_transformer_results.json")
@@ -585,6 +680,7 @@ async def get_metrics():
 
     return {
         "lstm_test_metrics": lstm_metrics,
+        "lstm_1d_test_metrics": lstm_1d_metrics,
         "transformer_test_metrics": trans_metrics,
         "tuning_results": tuning_results,
         "training_history": training_history,

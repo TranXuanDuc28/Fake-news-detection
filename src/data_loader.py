@@ -166,6 +166,11 @@ def load_raw_data(data_dir="data", segment_words=False, additional_dataset="none
         if os.path.exists(legacy_path):
             print(f"--> Phát hiện bộ dữ liệu bổ sung: {legacy_path}. Tiến hành gộp dữ liệu...")
             additional_dfs["train"].append(pd.read_csv(legacy_path))
+        # Load validation and test files from VFND and TinGia to match the 'both' setting
+        additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "vfnd_val.csv")))
+        additional_dfs["val"].append(pd.read_csv(os.path.join(data_dir, "tingia_val.csv")))
+        additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "vfnd_test.csv")))
+        additional_dfs["test"].append(pd.read_csv(os.path.join(data_dir, "tingia_test.csv")))
             
     # Concatenate and clean
     if additional_dfs["train"]:

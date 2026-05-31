@@ -825,7 +825,7 @@
             <!-- Analysis results row -->
             <div class="glass-panel accent" id="result-panel" style="display: none;">
                 <h2><i class="fa-solid fa-square-poll-horizontal" style="color: var(--rose);"></i> Kết Quả Đánh Giá Từ Hệ Thống AI</h2>
-                <div class="grid-2col" id="result-grid">
+                <div class="grid-3col" id="result-grid">
                     <!-- LSTM Card -->
                     <div class="result-card" id="lstm-card">
                         <div class="result-header">
@@ -871,6 +871,56 @@
                                 <i class="fa-solid fa-lightbulb" style="color: var(--amber);"></i> Từ khóa tác động mạnh nhất:
                             </div>
                             <div class="keyword-attrib-container" id="lstm-keywords-container">
+                                <!-- Loaded dynamically -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- LSTM 1D Card -->
+                    <div class="result-card" id="lstm1d-card">
+                        <div class="result-header">
+                            <span class="model-badge" style="color: #60a5fa;"><i class="fa-solid fa-network-wired"></i> Mô hình LSTM 1D</span>
+                            <span class="result-pill" id="lstm1d-pill">---</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Kết luận:</span>
+                            <span class="metric-value" id="lstm1d-conclusion">---</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Độ trễ xử lý (Latency):</span>
+                            <span class="metric-value" id="lstm1d-latency">---</span>
+                        </div>
+                        <div class="metric-row">
+                            <span class="metric-label">Tách từ (Word Segment):</span>
+                            <span class="metric-value" id="lstm1d-segment">---</span>
+                        </div>
+                        
+                        <div class="progress-container">
+                            <div class="progress-label-row">
+                                <span>Tin giả (Fake News)</span>
+                                <span id="lstm1d-prob-fake">0%</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill fake" id="lstm1d-fill-fake" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <div class="progress-container">
+                            <div class="progress-label-row">
+                                <span>Tin thật (Real News)</span>
+                                <span id="lstm1d-prob-real">0%</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill real" id="lstm1d-fill-real" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Explainability keywords -->
+                        <div class="explain-section" id="lstm1d-explain-section" style="display: none;">
+                            <div class="explain-header">
+                                <i class="fa-solid fa-lightbulb" style="color: var(--amber);"></i> Từ khóa tác động mạnh nhất:
+                            </div>
+                            <div class="keyword-attrib-container" id="lstm1d-keywords-container">
                                 <!-- Loaded dynamically -->
                             </div>
                         </div>
@@ -947,7 +997,8 @@
                     <div>
                         <label for="tuning-model-select" style="margin-right: 0.5rem; font-weight: 700;">Chọn mô hình xem:</label>
                         <select id="tuning-model-select" class="select-input" onchange="renderTuningData(this.value)">
-                            <option value="lstm">BiLSTM Classifier</option>
+                            <option value="lstm">BiLSTM Classifier (2 chiều)</option>
+                            <option value="lstm_1d">LSTM Classifier (1 chiều)</option>
                             <option value="transformer">phoBERT Classifier</option>
                         </select>
                     </div>
@@ -1265,6 +1316,63 @@
                 lstmSegment.innerText = "N/A";
             }
 
+            // 1.b LSTM 1D Result
+            const lstm1d = data.lstm_1d;
+            const lstm1dPill = document.getElementById('lstm1d-pill');
+            const lstm1dConclusion = document.getElementById('lstm1d-conclusion');
+            const lstm1dLatency = document.getElementById('lstm1d-latency');
+            const lstm1dSegment = document.getElementById('lstm1d-segment');
+            
+            if (lstm1d && lstm1d.success) {
+                const probFake = lstm1d.prob_fake * 100;
+                const probReal = lstm1d.prob_real * 100;
+                
+                lstm1dPill.innerText = lstm1d.is_fake ? "FAKE NEWS" : "REAL NEWS";
+                lstm1dPill.className = `result-pill ${lstm1d.is_fake ? 'fake' : 'real'}`;
+                
+                lstm1dConclusion.innerHTML = lstm1d.is_fake ? 
+                    `<strong style="color:var(--rose);">Tin giả</strong> (Với ngưỡng tin giả >= ${lstm1d.threshold})` : 
+                    `<strong style="color:var(--emerald);">Tin thật</strong> (Với ngưỡng tin giả < ${lstm1d.threshold})`;
+                    
+                lstm1dLatency.innerText = `${lstm1d.latency_ms.toFixed(1)} ms`;
+                lstm1dSegment.innerText = lstm1d.segment_words ? "Đã bật (PyVi)" : "Tắt (Không phân đoạn)";
+                
+                document.getElementById('lstm1d-prob-fake').innerText = `${probFake.toFixed(1)}%`;
+                document.getElementById('lstm1d-fill-fake').style.width = `${probFake}%`;
+                
+                document.getElementById('lstm1d-prob-real').innerText = `${probReal.toFixed(1)}%`;
+                document.getElementById('lstm1d-fill-real').style.width = `${probReal}%`;
+
+                // Render attribution keywords
+                const lstm1dExplain = document.getElementById('lstm1d-explain-section');
+                const lstm1dContainer = document.getElementById('lstm1d-keywords-container');
+                if (lstm1d.keywords && lstm1d.keywords.length > 0) {
+                    lstm1dExplain.style.display = 'block';
+                    lstm1dContainer.innerHTML = '';
+                    
+                    const lstm1dHeader = document.querySelector('#lstm1d-explain-section .explain-header');
+                    if (lstm1dHeader) {
+                        lstm1dHeader.innerHTML = `<i class="fa-solid fa-lightbulb" style="color: var(--amber);"></i> Từ khóa chỉ ra ${lstm1d.is_fake ? 'tin giả' : 'tin thật'}:`;
+                    }
+                    
+                    const badgeClass = lstm1d.is_fake ? 'neg' : 'pos';
+                    lstm1d.keywords.slice(0, 6).forEach(k => {
+                        const badge = document.createElement('span');
+                        badge.className = `keyword-attrib-badge ${badgeClass}`;
+                        badge.innerHTML = `<span>${k.word}</span>`;
+                        lstm1dContainer.appendChild(badge);
+                    });
+                } else {
+                    lstm1dExplain.style.display = 'none';
+                }
+            } else {
+                lstm1dPill.innerText = "LỖI";
+                lstm1dPill.className = "result-pill fake";
+                lstm1dConclusion.innerText = (lstm1d && lstm1d.error) ? lstm1d.error : "Mô hình lỗi / Chưa load";
+                lstm1dLatency.innerText = "N/A";
+                lstm1dSegment.innerText = "N/A";
+            }
+
             // 2. Transformer Result
             const trans = data.transformer;
             const transPill = document.getElementById('trans-pill');
@@ -1386,6 +1494,23 @@
                         "0.0001": { val_f1_history: [0.20, 0.35, 0.45], final_metrics: { accuracy: 0.78, f1_binary: 0.44 } },
                         "0.001": { val_f1_history: [0.38, 0.52, 0.59], final_metrics: { accuracy: 0.84, f1_binary: 0.59 } },
                         "0.005": { val_f1_history: [0.41, 0.50, 0.56], final_metrics: { accuracy: 0.82, f1_binary: 0.55 } }
+                    }
+                },
+                lstm_1d: {
+                    dropout_sweep: {
+                        "0.1": { val_f1_history: [0.32, 0.45, 0.50], final_metrics: { accuracy: 0.79, f1_binary: 0.49 } },
+                        "0.3": { val_f1_history: [0.35, 0.49, 0.56], final_metrics: { accuracy: 0.82, f1_binary: 0.56 } },
+                        "0.5": { val_f1_history: [0.30, 0.42, 0.51], final_metrics: { accuracy: 0.80, f1_binary: 0.50 } }
+                    },
+                    batch_size_sweep: {
+                        "8": { val_f1_history: [0.36, 0.48, 0.54], final_metrics: { accuracy: 0.81, f1_binary: 0.54 } },
+                        "16": { val_f1_history: [0.35, 0.49, 0.56], final_metrics: { accuracy: 0.82, f1_binary: 0.56 } },
+                        "32": { val_f1_history: [0.31, 0.44, 0.52], final_metrics: { accuracy: 0.80, f1_binary: 0.51 } }
+                    },
+                    lr_sweep: {
+                        "0.0001": { val_f1_history: [0.18, 0.32, 0.42], final_metrics: { accuracy: 0.75, f1_binary: 0.41 } },
+                        "0.001": { val_f1_history: [0.35, 0.49, 0.56], final_metrics: { accuracy: 0.82, f1_binary: 0.56 } },
+                        "0.005": { val_f1_history: [0.38, 0.47, 0.53], final_metrics: { accuracy: 0.80, f1_binary: 0.52 } }
                     }
                 },
                 transformer: {
@@ -1565,12 +1690,22 @@
 
             const conclusionBox = document.getElementById('best-params-conclusion');
             if (conclusionBox) {
-                const modelName = modelKey === 'lstm' ? 'BiLSTM Classifier' : 'phoBERT Transformer';
-                const accentColor = modelKey === 'lstm' ? 'var(--indigo)' : 'var(--rose)';
+                const modelName = modelKey === 'lstm' ? 'BiLSTM Classifier (2 chiều)' : 
+                                  modelKey === 'lstm_1d' ? 'LSTM Classifier (1 chiều)' : 
+                                  'phoBERT Transformer';
+                const accentColor = modelKey === 'lstm' ? 'var(--indigo)' : 
+                                    modelKey === 'lstm_1d' ? '#60a5fa' : 
+                                    'var(--rose)';
+                const borderColor = modelKey === 'lstm' ? 'rgba(99, 102, 241, 0.15)' : 
+                                    modelKey === 'lstm_1d' ? 'rgba(96, 165, 250, 0.15)' : 
+                                    'rgba(244, 63, 94, 0.15)';
+                const bgStyle = modelKey === 'lstm' ? 'rgba(99, 102, 241, 0.03)' : 
+                                modelKey === 'lstm_1d' ? 'rgba(96, 165, 250, 0.03)' : 
+                                'rgba(244, 63, 94, 0.03)';
                 const f1Pct = (Math.max(maxDpf1, maxBsf1, maxLrf1) * 100).toFixed(1);
                 
-                conclusionBox.style.borderColor = modelKey === 'lstm' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(244, 63, 94, 0.15)';
-                conclusionBox.style.background = modelKey === 'lstm' ? 'rgba(99, 102, 241, 0.03)' : 'rgba(244, 63, 94, 0.03)';
+                conclusionBox.style.borderColor = borderColor;
+                conclusionBox.style.background = bgStyle;
                 
                 conclusionBox.innerHTML = `
                     <h4 style="font-weight: 800; color: ${accentColor}; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
