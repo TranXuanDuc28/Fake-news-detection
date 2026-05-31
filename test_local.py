@@ -238,12 +238,16 @@ def load_lstm_model(model_path, device):
         if embedding_dim is None: embedding_dim = 128
         if hidden_dim is None: hidden_dim = 128
         
+        model_type = checkpoint.get("model_type", "lstm")
+        is_bidirectional = (model_type == "lstm")
+        
         from src.lstm_model import BiLSTMClassifier
         model = BiLSTMClassifier(
             vocab_size=len(vocab_w2i),
             embedding_dim=embedding_dim,
             hidden_dim=hidden_dim,
-            dropout=hyperparams.get("dropout", 0.3)
+            dropout=hyperparams.get("dropout", 0.3),
+            bidirectional=is_bidirectional
         )
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)
@@ -283,7 +287,7 @@ def load_trans_model(model_path, device):
         print(f"{RED}Lỗi tải mô hình Transformer từ {model_path}: {e}{RESET}")
         return None, None, None, False
 
-def run_local_test(lstm_path="models/best_lstm.pt", trans_path="models/best_transformer.pt", lstm_threshold=0.63, trans_threshold=0.50):
+def run_local_test(lstm_path="models/best_lstm.pt", lstm_1d_path="models/best_lstm_1d.pt", trans_path="models/best_transformer.pt", lstm_threshold=0.63, lstm_1d_threshold=0.58, trans_threshold=0.50):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"{CYAN}{BOLD}=== HỆ THỐNG KIỂM THỬ MÔ HÌNH TIN GIẢ TRÊN LOCAL ==={RESET}")
     print(f"Thiết bị chạy: {BOLD}{device.type.upper()}{RESET}")
@@ -293,12 +297,16 @@ def run_local_test(lstm_path="models/best_lstm.pt", trans_path="models/best_tran
     if lstm_path and not os.path.exists(lstm_path):
         fallback_paths = ["models/best_lstm.pt"]
         lstm_path = next((p for p in fallback_paths if os.path.exists(p)), None)
+
+    if lstm_1d_path and not os.path.exists(lstm_1d_path):
+        fallback_paths = ["models/best_lstm_1d.pt"]
+        lstm_1d_path = next((p for p in fallback_paths if os.path.exists(p)), None)
         
     if trans_path and not os.path.exists(trans_path):
         fallback_paths = ["models/best_transformer.pt", "models/best_transformer_phobert.pt", "models/best_transformer_distilbert.pt"]
         trans_path = next((p for p in fallback_paths if os.path.exists(p)), None)
     
-    # Load LSTM
+    # Load LSTM (BiLSTM)
     lstm_model, lstm_vocab, lstm_segment = None, None, False
     if lstm_path:
         print(f"Đang tải BiLSTM từ: {BOLD}{lstm_path}{RESET}...")
@@ -307,6 +315,16 @@ def run_local_test(lstm_path="models/best_lstm.pt", trans_path="models/best_tran
             print(f"{GREEN}✓ Tải BiLSTM thành công! (Tách từ: {lstm_segment}){RESET}")
     else:
         print(f"{YELLOW}⚠ Không tìm thấy file trọng số BiLSTM (best_lstm.pt){RESET}")
+
+    # Load LSTM 1D
+    lstm_1d_model, lstm_1d_vocab, lstm_1d_segment = None, None, False
+    if lstm_1d_path:
+        print(f"Đang tải LSTM 1 chiều từ: {BOLD}{lstm_1d_path}{RESET}...")
+        lstm_1d_model, lstm_1d_vocab, lstm_1d_segment = load_lstm_model(lstm_1d_path, device)
+        if lstm_1d_model:
+            print(f"{GREEN}✓ Tải LSTM 1 chiều thành công! (Tách từ: {lstm_1d_segment}){RESET}")
+    else:
+        print(f"{YELLOW}⚠ Không tìm thấy file trọng số LSTM 1 chiều (best_lstm_1d.pt){RESET}")
         
     # Load Transformer
     trans_model, trans_tokenizer, trans_name, trans_segment = None, None, None, False
@@ -318,7 +336,7 @@ def run_local_test(lstm_path="models/best_lstm.pt", trans_path="models/best_tran
     else:
         print(f"{YELLOW}⚠ Không tìm thấy file trọng số Transformer (best_transformer.pt / best_transformer_phobert.pt / best_transformer_distilbert.pt){RESET}")
 
-    if not lstm_model and not trans_model:
+    if not lstm_model and not lstm_1d_model and not trans_model:
         print(f"\n{RED}{BOLD}LỖI: Không tìm thấy bất kỳ file trọng số mô hình nào trong thư mục 'models/'!{RESET}")
         print("Vui lòng huấn luyện mô hình hoặc copy tệp trọng số vào thư mục 'models/' trước.")
         return
@@ -349,6 +367,22 @@ def run_local_test(lstm_path="models/best_lstm.pt", trans_path="models/best_tran
                 print(f"  └─ {BOLD}[BiLSTM]:{RESET}      {pred_label} | Ngưỡng: {lstm_threshold:.2f} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
             except Exception as e:
                 print(f"  └─ [BiLSTM]: Lỗi dự đoán - {e}")
+
+        # 1.b. Dự đoán bằng LSTM 1 chiều
+        if lstm_1d_model:
+            try:
+                inputs = lstm_1d_vocab.encode(text, max_len=128, segment_words=lstm_1d_segment).to(device)
+                with torch.no_grad():
+                    logits = lstm_1d_model(inputs)
+                    probs = torch.softmax(logits, dim=1).squeeze(0)
+                    prob_fake = probs[1].item()
+                    prob_real = probs[0].item()
+                
+                pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= lstm_1d_threshold else f"{GREEN}TIN THẬT (REAL){RESET}"
+                confidence = prob_fake if prob_fake >= lstm_1d_threshold else prob_real
+                print(f"  └─ {BOLD}[LSTM 1D]:{RESET}     {pred_label} | Ngưỡng: {lstm_1d_threshold:.2f} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+            except Exception as e:
+                print(f"  └─ [LSTM 1D]: Lỗi dự đoán - {e}")
                 
         # 2. Dự đoán bằng Transformer
         if trans_model:
@@ -405,6 +439,22 @@ def run_local_test(lstm_path="models/best_lstm.pt", trans_path="models/best_tran
                     print(f"  └─ {BOLD}[BiLSTM]:{RESET}      {pred_label} | Ngưỡng: {lstm_threshold:.2f} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
                 except Exception as e:
                     print(f"  └─ [BiLSTM]: Lỗi dự đoán - {e}")
+
+            # 1.b. Dự đoán bằng LSTM 1 chiều
+            if lstm_1d_model:
+                try:
+                    inputs = lstm_1d_vocab.encode(user_text, max_len=128, segment_words=lstm_1d_segment).to(device)
+                    with torch.no_grad():
+                        logits = lstm_1d_model(inputs)
+                        probs = torch.softmax(logits, dim=1).squeeze(0)
+                        prob_fake = probs[1].item()
+                        prob_real = probs[0].item()
+                    
+                    pred_label = f"{RED}TIN GIẢ (FAKE){RESET}" if prob_fake >= lstm_1d_threshold else f"{GREEN}TIN THẬT (REAL){RESET}"
+                    confidence = prob_fake if prob_fake >= lstm_1d_threshold else prob_real
+                    print(f"  └─ {BOLD}[LSTM 1D]:{RESET}     {pred_label} | Ngưỡng: {lstm_1d_threshold:.2f} | Độ tin cậy: {confidence*100:.2f}% (Fake: {prob_fake*100:.1f}%, Real: {prob_real*100:.1f}%)")
+                except Exception as e:
+                    print(f"  └─ [LSTM 1D]: Lỗi dự đoán - {e}")
                     
             # 2. Dự đoán bằng Transformer
             if trans_model:
@@ -434,14 +484,18 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Run local benchmarks on model weights.")
     parser.add_argument("--lstm_path", type=str, default="models/best_lstm.pt", help="Path to best_lstm.pt")
+    parser.add_argument("--lstm_1d_path", type=str, default="models/best_lstm_1d.pt", help="Path to best_lstm_1d.pt")
     parser.add_argument("--trans_path", type=str, default="models/best_transformer.pt", help="Path to best_transformer.pt")
-    parser.add_argument("--lstm_threshold", type=float, default=0.63, help="Decision threshold for LSTM (default 0.63)")
+    parser.add_argument("--lstm_threshold", type=float, default=0.63, help="Decision threshold for BiLSTM (default 0.63)")
+    parser.add_argument("--lstm_1d_threshold", type=float, default=0.58, help="Decision threshold for LSTM 1D (default 0.58)")
     parser.add_argument("--trans_threshold", type=float, default=0.50, help="Decision threshold for Transformer (default 0.50)")
     args = parser.parse_args()
     
     run_local_test(
         lstm_path=args.lstm_path,
+        lstm_1d_path=args.lstm_1d_path,
         trans_path=args.trans_path,
         lstm_threshold=args.lstm_threshold,
+        lstm_1d_threshold=args.lstm_1d_threshold,
         trans_threshold=args.trans_threshold
     )

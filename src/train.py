@@ -36,7 +36,7 @@ def train_epoch(model, dataloader, optimizer, criterion, device, model_type):
     for batch in progress_bar:
         optimizer.zero_grad()
         
-        if model_type == "lstm":
+        if model_type in ["lstm", "lstm_1d"]:
             inputs, targets = batch
             inputs, targets = inputs.to(device), targets.to(device)
             outputs = model(inputs)
@@ -74,7 +74,7 @@ def evaluate(model, dataloader, criterion, device, model_type, return_prediction
     progress_bar = tqdm(dataloader, desc="  Evaluating", leave=False)
     with torch.no_grad():
         for batch in progress_bar:
-            if model_type == "lstm":
+            if model_type in ["lstm", "lstm_1d"]:
                 inputs, targets = batch
                 inputs, targets = inputs.to(device), targets.to(device)
                 outputs = model(inputs)
@@ -370,7 +370,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
         use_class_weights = False
         
     # Enforce embedding_dim if use_pretrained_emb is active
-    if model_type == "lstm" and use_pretrained_emb:
+    if model_type in ["lstm", "lstm_1d"] and use_pretrained_emb:
         if embedding_dim not in [100, 300]:
             embedding_dim = 100
         
@@ -379,7 +379,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
     print(f"Params: Epochs={epochs}, BatchSize={batch_size}, LR={lr}, Dropout={dropout}, Subset={subset_size}, Oversample={oversample}, UseClassWeights={use_class_weights}, Patience={patience}, SegmentWords={resolved_segment_words}, EmbeddingDim={embedding_dim}, HiddenDim={hidden_dim}, UsePretrainedEmb={use_pretrained_emb}, AdditionalDataset={additional_dataset}")
     
     # Get DataLoaders
-    if model_type == "lstm":
+    if model_type in ["lstm", "lstm_1d"]:
         train_loader, val_loader, test_loader, vocab = get_dataloaders(
             data_dir=data_dir, model_type="lstm", batch_size=batch_size, subset_size=subset_size, oversample=oversample, segment_words=segment_words, additional_dataset=additional_dataset
         )
@@ -398,7 +398,8 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
             vocab_size=vocab.vocab_size,
             embedding_dim=embedding_dim,
             hidden_dim=hidden_dim,
-            dropout=dropout
+            dropout=dropout,
+            bidirectional=(model_type == "lstm")
         )
         
         if pretrained_weights is not None:
@@ -431,7 +432,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
         criterion = nn.CrossEntropyLoss()
         
     # Add weight decay (L2 regularization) for LSTM to reduce overfitting
-    wd = 1e-4 if model_type == "lstm" else 0.0
+    wd = 1e-4 if model_type in ["lstm", "lstm_1d"] else 0.0
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
     # Define learning rate scheduler (halves learning rate if validation F1 does not improve for 2 epochs)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=2)
@@ -497,16 +498,16 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
                     "dropout": dropout,
                     "batch_size": batch_size,
                     "segment_words": resolved_segment_words,
-                    "embedding_dim": embedding_dim if model_type == "lstm" else None,
-                    "hidden_dim": hidden_dim if model_type == "lstm" else None,
-                    "use_pretrained_emb": use_pretrained_emb if model_type == "lstm" else None,
+                    "embedding_dim": embedding_dim if model_type in ["lstm", "lstm_1d"] else None,
+                    "hidden_dim": hidden_dim if model_type in ["lstm", "lstm_1d"] else None,
+                    "use_pretrained_emb": use_pretrained_emb if model_type in ["lstm", "lstm_1d"] else None,
                     "freeze_backbone": freeze_backbone if model_type == "transformer" else None,
                     "transformer_model_name": transformer_model_name if model_type == "transformer" else None,
                     "additional_dataset": additional_dataset
                 }
             }
             # For LSTM we must save vocab so we can encode words for inference
-            if model_type == "lstm":
+            if model_type in ["lstm", "lstm_1d"]:
                 checkpoint["vocab_word2idx"] = vocab.word2idx
                 
             torch.save(checkpoint, best_model_path)
@@ -568,7 +569,7 @@ def train_model(model_type, epochs=5, batch_size=16, lr=1e-3, dropout=0.3, freez
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train LSTM/Transformer model for Vietnamese Fake News Detection")
-    parser.add_argument("--model", type=str, default="lstm", choices=["lstm", "transformer"], help="Model type to train")
+    parser.add_argument("--model", type=str, default="lstm", choices=["lstm", "lstm_1d", "transformer"], help="Model type to train")
     parser.add_argument("--epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=16, choices=[8, 16, 32], help="Batch size")
     parser.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
